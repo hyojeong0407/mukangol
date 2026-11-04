@@ -1,0 +1,131 @@
+{
+  "suspects": [
+    {
+      "id": "beomgol",
+      "name": "범골댁",
+      "disguise": "사냥꾼의 과부",
+      "yokai": "호랑이",
+      "impression": "과묵하고 눈빛이 날카롭다.",
+      "bio": "지아비가 전란 통에 산에서 돌아오지 않은 뒤 홀로 덫을 놓으며 산다.",
+      "portrait": "images/characters/char-beomgol-default.webp",
+      "voice": { "gender": "female", "pitch": 0.8, "rate": 0.9 },
+      "detainLines": [
+        "억울하오. 나는 산짐승이나 잡는 과부일 뿐이오.",
+        "이 줄을 풀어라. 나는 아무것도 하지 않았다.",
+        "덫에 걸린 짐승 신세로구먼. 나리, 사람을 잘못 보셨소."
+      ],
+      "releaseLines": ["…진작 그럴 것이지.", "다음엔 눈을 똑바로 뜨고 보시오."]
+    },
+    {
+      "id": "soedol",
+      "name": "쇠돌어멈",
+      "disguise": "대장간 일꾼",
+      "yokai": "두억시니",
+      "impression": "거구에 화를 잘 낸다.",
+      "bio": "포로로 끌려간 아들 쇠돌을 기다리며 대장간 풀무질로 끼니를 잇는다.",
+      "portrait": "images/characters/char-soedol-default.webp",
+      "voice": { "gender": "female", "pitch": 0.7, "rate": 1.05 },
+      "detainLines": [
+        "이게 무슨 짓이오! 내 아들 기다린 죄밖에 없소!",
+        "억울하오, 억울해! 이 손으로 쇠나 두드렸지 사람은 안 건드렸소!",
+        "놓으시오! 쇠돌이가 돌아오면 이 어미를 어디서 찾으란 말이오!"
+      ],
+      "releaseLines": ["흥, 그럴 줄 알았소.", "대장간 불 꺼지기 전에 돌아가야겠소."]
+    },
+    {
+      "id": "mukjip",
+      "name": "묵집 주모",
+      "disguise": "주막 주모",
+      "yokai": "도깨비",
+      "impression": "입담이 좋고 내기를 즐긴다.",
+      "bio": "고을 어귀 주막 '묵집'을 지킨다. 오가는 소문은 모두 이 집 마루를 거친다.",
+      "portrait": "images/characters/char-mukjip-default.webp",
+      "voice": { "gender": "female", "pitch": 1.15, "rate": 1.15 },
+      "detainLines": [
+        "아이고 나리, 이 주모가 무슨 죄가 있다고요! 술값 떼먹은 놈들이나 잡아가시오!",
+        "내기를 하시려거든 술상 앞에서 하시지, 포승줄이 웬 말이오!",
+        "억울해서 못 살겠네! 고을 사람 다 물어보시오, 이 주모가 어떤 사람인지!"
+      ],
+      "releaseLines": [
+        "거 보시오, 내가 뭐랬소! 다음엔 막걸리나 한 사발 하고 가시오.",
+        "아이고, 십 년 감수했네."
+      ]
+    },
+    {
+      "id": "mul",
+      "name": "물댁",
+      "disguise": "빨래터 새댁",
+      "yokai": "처녀귀신",
+      "impression": "창백하고 말수가 적다.",
+      "bio": "혼례를 올리고 한 해도 못 되어 남편을 잃었다. 새벽마다 빨래터에 나간다.",
+      "portrait": "images/characters/char-mul-default.webp",
+      "voice": { "gender": "female", "pitch": 1.3, "rate": 0.85 },
+      "detainLines": [
+        "…저는… 빨래만 했을 뿐이에요. 제발요…",
+        "나리… 저 같은 것이 무슨 힘이 있어 사람을 해치겠어요.",
+        "억울해요… 정말이에요…"
+      ],
+      "releaseLines": ["…고맙습니다, 나리.", "…"]
+    },
+    {
+      "id": "yeonhwa",
+      "name": "연화댁",
+      "disguise": "약초 장수",
+      "yokai": "구미호",
+      "impression": "아름답고 말이 매끄럽다.",
+      "bio": "철마다 고을을 돌며 약초를 판다. 올가을에는 이상하게도 떠나지 않았다.",
+      "portrait": "images/characters/char-yeonhwa-default.webp",
+      "voice": { "gender": "female", "pitch": 1.1, "rate": 0.95 },
+      "detainLines": [
+        "나리, 오해십니다. 약초 파는 아녀자가 어찌 사람을 해치겠습니까.",
+        "이리 거칠게 다루시면 손목에 멍이 듭니다. 억울한 사람에게 너무하시네요.",
+        "제가 무엇을 했다고요? 증거를 보여 주시지요, 나리."
+      ],
+      "releaseLines": ["역시 나리는 사리가 밝으십니다.", "다음에 오시면 좋은 약초를 드리지요."]
+    }
+  ],
+  "cast": [
+    {
+      "id": "narrator",
+      "name": "",
+      "role": "해설",
+      "portrait": "",
+      "voice": { "gender": "male", "pitch": 0.9, "rate": 0.95 }
+    },
+    {
+      "id": "protagonist",
+      "name": "서도윤",
+      "role": "종사관 (주인공)",
+      "portrait": "images/characters/char-protagonist-default.webp",
+      "voice": { "gender": "male", "pitch": 0.85, "rate": 1 }
+    },
+    {
+      "id": "shaman",
+      "name": "현암",
+      "role": "주술사 · 전 사역원 역관",
+      "portrait": "images/characters/char-shaman-default.webp",
+      "voice": { "gender": "male", "pitch": 0.55, "rate": 0.85 }
+    },
+    {
+      "id": "pojol-1",
+      "name": "박 포졸",
+      "role": "노련한 고참",
+      "portrait": "images/characters/char-pojol-1-default.webp",
+      "voice": { "gender": "male", "pitch": 0.75, "rate": 1 }
+    },
+    {
+      "id": "pojol-2",
+      "name": "강 포졸",
+      "role": "의욕 넘치는 젊은이",
+      "portrait": "images/characters/char-pojol-2-default.webp",
+      "voice": { "gender": "male", "pitch": 1.05, "rate": 1.15 }
+    },
+    {
+      "id": "pojol-3",
+      "name": "오 포졸",
+      "role": "겁 많은 신참",
+      "portrait": "images/characters/char-pojol-3-default.webp",
+      "voice": { "gender": "male", "pitch": 1.25, "rate": 1.1 }
+    }
+  ]
+}

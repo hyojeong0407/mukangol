@@ -1,0 +1,39 @@
+{
+  "name": "mukangol",
+  "private": true,
+  "version": "0.2.1",
+  "description": "묵안골 — 병자호란 이후 조선 배경 웹 추리 공포 게임",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/sync-assets.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/sync-assets.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:sim": "vitest run tests/simulation",
+    "test:e2e": "playwright test",
+    "assets": "node scripts/convert-assets.mjs",
+    "zip:itch": "node scripts/zip-itch.mjs"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "fflate": "^0.8.3",
+    "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
+    "typescript": "~5.9",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}
