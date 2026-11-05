@@ -3,10 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 // 규칙 흐름 테스트는 배경 연출(Phaser)과 음성 없이 돌린다. 연출 레이어는 아래 별도 테스트에서 확인한다.
 test.beforeEach(async ({ page }, info) => {
   await page.addInitScript(() => {
-    localStorage.setItem(
-      'mukangol.settings.v1',
-      JSON.stringify({ voiceOn: false, autoAdvance: true, reduceMotion: true }),
-    );
+    localStorage.setItem('mukangol.settings.v1', JSON.stringify({ autoAdvance: true, reduceMotion: true }));
   });
   if (!info.title.includes('연출')) await page.route('**/fx-*.js', (r) => r.abort());
 });

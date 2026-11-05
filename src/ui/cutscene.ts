@@ -1,5 +1,4 @@
 import { sound, type Sfx } from '../audio/sound';
-import { tts, type VoiceProfile } from '../audio/tts';
 import { CAST, CATEGORIES, SUSPECTS, category, clueValue, suspect } from '../core/data';
 import type { Hint, Incident } from '../core/types';
 import type { Mood } from '../scenes/fx';
@@ -9,7 +8,7 @@ import { html, raw, type Raw } from './html';
 
 /**
  * 컷신(대사·해설·장면 전환) 플레이어.
- * - 대사는 한 글자씩 찍히고, 동시에 TTS로 읽힌다. (TTS가 없으면 자막만)
+ * - 대사는 대사창에 한 글자씩 찍힌다. (음성 없이 자막으로만 연출)
  * - 클릭/Space/Enter: 글자가 찍히는 중이면 바로 다 보여 주고, 다 보였으면 다음으로.
  * - 자동 진행이 켜져 있으면 읽기가 끝난 뒤 저절로 넘어간다.
  * - 건너뛰기(Esc): 남은 컷신 전체를 넘긴다.
@@ -44,27 +43,21 @@ export interface CutsceneEnv {
 interface Speaker {
   name: string;
   portrait: string;
-  voice: VoiceProfile;
   isSuspect: boolean;
 }
 
-const NARRATOR: VoiceProfile = { gender: 'male', pitch: 0.9, rate: 0.95 };
-
 function speaker(who: string): Speaker {
   const c = CAST.find((x) => x.id === who);
-  if (c) return { name: c.name, portrait: c.portrait, voice: c.voice as VoiceProfile, isSuspect: false };
+  if (c) return { name: c.name, portrait: c.portrait, isSuspect: false };
   const s = SUSPECTS.find((x) => x.id === who);
-  if (s)
-    return {
-      name: s.name,
-      portrait: s.portrait,
-      voice: (s as { voice: VoiceProfile }).voice,
-      isSuspect: true,
-    };
-  return { name: '', portrait: '', voice: NARRATOR, isSuspect: false };
+  if (s) return { name: s.name, portrait: s.portrait, isSuspect: true };
+  return { name: '', portrait: '', isSuspect: false };
 }
 
-export const voiceOf = (who: string) => speaker(who).voice;
+/** 자동 넘김 때 읽을 시간: 글자 수에 비례 (0.9초 ~ 6초) */
+export function readMs(text: string) {
+  return Math.min(6000, Math.max(900, text.replace(/\s/g, '').length * 85) + 700);
+}
 
 const NUM = ['①', '②', '③', '④', '⑤', '⑥'];
 
@@ -113,7 +106,6 @@ export class CutscenePlayer {
 
   skip() {
     this.skipAll = true;
-    tts.cancel();
     this.typing?.finish();
     this.resolveStep?.();
   }
@@ -123,7 +115,6 @@ export class CutscenePlayer {
       this.typing.finish();
       return;
     }
-    tts.cancel();
     this.resolveStep?.();
   }
 
@@ -142,7 +133,6 @@ export class CutscenePlayer {
         await this.runStep(step);
       }
     } finally {
-      tts.cancel();
       this.active = false;
       this.typing = null;
       this.resolveStep = null;
@@ -225,7 +215,6 @@ export class CutscenePlayer {
     root.dataset.kind = step.t;
 
     let text = '';
-    let voice: VoiceProfile = NARRATOR;
     let showBox = true;
     let typewrite = true;
 
@@ -254,7 +243,6 @@ export class CutscenePlayer {
           : '';
         nameEl.textContent = sp.name;
         text = step.text;
-        voice = sp.voice;
         break;
       }
       case 'journal': {
@@ -264,7 +252,6 @@ export class CutscenePlayer {
         portrait.innerHTML = '';
         nameEl.textContent = sp.name;
         text = step.text;
-        voice = sp.voice;
         showBox = false;
         typewrite = false;
         break;
@@ -275,7 +262,6 @@ export class CutscenePlayer {
         portrait.innerHTML = sp.portrait ? html`<img src="${sp.portrait}" alt="" class="right" />`.value : '';
         nameEl.textContent = sp.name;
         text = step.text;
-        voice = sp.voice;
         showBox = false;
         typewrite = false;
         break;
@@ -312,9 +298,8 @@ export class CutscenePlayer {
     textEl.textContent = '';
     box.classList.remove('done');
 
-    // 타이핑 + 음성 동시 진행
+    // 글자 찍기
     const typed = this.typewriter(textEl, text, typewrite && !this.env.reduceMotion());
-    const spoken = tts.speak(text, voice);
     const minRead = new Promise<void>((r) => setTimeout(r, step.t === 'title' ? 1400 : 0));
 
     await new Promise<void>((resolve) => {
@@ -327,11 +312,11 @@ export class CutscenePlayer {
       };
       this.resolveStep = done;
       if (this.skipAll) return done();
-      Promise.all([typed, spoken, minRead]).then(([, usedVoice]) => {
+      Promise.all([typed, minRead]).then(() => {
         box.classList.add('done');
         if (!this.env.autoAdvance() || settled) return;
-        // 음성이 없으면 읽을 시간을 준다
-        const wait = usedVoice ? 650 : Math.min(6000, tts.estimateMs(text) * 0.6 + 900);
+        // 다 찍힌 뒤 읽을 시간을 준다
+        const wait = readMs(text);
         window.setTimeout(() => {
           if (this.resolveStep === done && this.env.autoAdvance()) done();
         }, wait);

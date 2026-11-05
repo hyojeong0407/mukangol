@@ -3,7 +3,6 @@
  * - 배경음(BGM): 동업자 음원 audio/bgm-{title|reasoning|interrogation|ending}.ogg (audio-spec.md).
  *   화면이 바뀌면 이전 곡은 페이드아웃, 새 곡은 페이드인한다. 파일이 없으면 합성 드론으로 대신한다.
  * - 효과음: audio/sfx-{종류}.ogg 가 있으면 그 파일, 없으면 Web Audio 합성음.
- * - 대사(TTS)가 나오는 동안에는 배경음을 낮춘다(덕킹).
  * 브라우저 정책상 첫 사용자 입력 이후에만 소리가 난다.
  */
 export type Sfx = 'paper' | 'stamp' | 'gong' | 'click' | 'reveal' | 'heartbeat' | 'rooster';
@@ -19,8 +18,7 @@ const SYNTH_MOOD: Record<BgmTrack, 'calm' | 'tense'> = {
   ending: 'tense',
 };
 const FADE_MS = 1200;
-const BGM_LEVEL = 0.6; // 대사가 묻히지 않도록 배경음 상한
-const DUCK_LEVEL = 0.45; // 대사 중 배경음 비율
+const BGM_LEVEL = 0.6; // 효과음이 묻히지 않도록 배경음 상한
 
 class SoundManager {
   private ctx: AudioContext | null = null;
@@ -68,7 +66,6 @@ class SoundManager {
   private track: BgmTrack | null = null;
   private bgmEls: HTMLAudioElement[] = [];
   private current: HTMLAudioElement | null = null;
-  private ducked = false;
   private fades = new Map<HTMLAudioElement, number>();
 
   /** 지금 화면에 맞는 배경음. 같은 곡이면 그대로 이어서 재생한다. */
@@ -95,21 +92,8 @@ class SoundManager {
     }
   }
 
-  /** 대사(TTS) 중에는 배경음을 낮춘다 */
-  duck(on: boolean) {
-    if (this.ducked === on) return;
-    this.ducked = on;
-    this.applyBgmVolume();
-    if (this.ctx && this.bgmGain)
-      this.bgmGain.gain.setTargetAtTime(
-        this.bgmVolume * 0.35 * (on ? DUCK_LEVEL : 1),
-        this.ctx.currentTime,
-        0.3,
-      );
-  }
-
   private elVolume(level: number) {
-    return Math.max(0, Math.min(1, this.bgmVolume * BGM_LEVEL * level * (this.ducked ? DUCK_LEVEL : 1)));
+    return Math.max(0, Math.min(1, this.bgmVolume * BGM_LEVEL * level));
   }
 
   private applyBgmVolume() {

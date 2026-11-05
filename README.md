@@ -57,7 +57,7 @@ npm run dev        # http://localhost:5173 개발 서버 (정답 DEBUG 패널 �
 - `{victim}`, `{yokai}` 같은 변수와 `{이/가}`, `{은/는}`, `{을/를}` 조사는 자동으로 채워집니다.
 - 배역별 목소리(성별, 음높이, 빠르기)와 구속 항변 대사는 `src/data/suspects.json`에 있습니다.
 - 배경음은 `audio-spec.md`대로 화면마다 바뀝니다 (`src/ui/app.ts`의 `bgmTrack()`).
-- 대사 음성은 브라우저 내장 TTS입니다. Windows의 Edge는 한국어 남녀 음성(InJoon, SunHi)이 있어 가장 자연스럽습니다.
+- 대사는 음성 없이 대사창 자막(한 글자씩 찍기)으로만 연출합니다. 자동 넘김은 글자 수에 맞춰 읽을 시간을 줍니다 (`src/ui/cutscene.ts`의 `readMs`).
 
 ## 아트 교체 방법
 

@@ -33,7 +33,6 @@ export interface Suspect {
   impression: string;
   bio: string;
   portrait: string;
-  voice: { gender: 'male' | 'female'; pitch: number; rate: number };
   detainLines: string[];
   releaseLines: string[];
 }

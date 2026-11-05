@@ -5,9 +5,6 @@ export interface Settings {
   sfxVolume: number; // 0~1
   textScale: 1 | 1.15 | 1.3;
   reduceMotion: boolean;
-  /** 대사 음성(TTS) */
-  voiceOn: boolean;
-  voiceVolume: number; // 0~1
   /** 대사가 끝나면 자동으로 다음 대사로 */
   autoAdvance: boolean;
 }
@@ -17,8 +14,6 @@ export const DEFAULT_SETTINGS: Settings = {
   sfxVolume: 0.7,
   textScale: 1,
   reduceMotion: false,
-  voiceOn: true,
-  voiceVolume: 1,
   autoAdvance: true,
 };
 
@@ -29,7 +24,11 @@ export function loadSettings(): Settings {
       const prefersReduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
       return { ...DEFAULT_SETTINGS, reduceMotion: prefersReduce };
     }
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    // v0.2의 대사 음성 설정(voiceOn, voiceVolume)은 더 이상 쓰지 않으므로 버린다
+    const saved = JSON.parse(raw) as Record<string, unknown>;
+    delete saved.voiceOn;
+    delete saved.voiceVolume;
+    return { ...DEFAULT_SETTINGS, ...(saved as Partial<Settings>) };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

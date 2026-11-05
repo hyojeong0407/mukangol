@@ -1,5 +1,4 @@
 import { sound, type BgmTrack, type Sfx } from '../audio/sound';
-import { tts } from '../audio/tts';
 import { CONFIG } from '../config';
 import { CATEGORY_IDS, SUSPECTS, TEXTS, suspect, type CategoryId } from '../core/data';
 import * as G from '../core/game';
@@ -9,7 +8,7 @@ import type { FxController, Mood } from '../scenes/fx';
 import { createSaveStore } from '../state/save';
 import { applySettingsToDocument, loadSettings, saveSettings, type Settings } from '../state/settings';
 import { suspectPortrait } from './assets';
-import { CutscenePlayer, voiceOf, type Step } from './cutscene';
+import { CutscenePlayer, readMs, type Step } from './cutscene';
 import { html, raw, type Raw } from './html';
 import * as S from './story';
 import * as V from './views';
@@ -44,7 +43,6 @@ export class App {
   ) {
     applySettingsToDocument(this.settings);
     this.applyAudioSettings();
-    tts.onSpeaking = (on) => sound.duck(on);
     this.cs = new CutscenePlayer(csHost, {
       setMood: (m) => this.setMood(m),
       shake: () => this.fx?.pulse(),
@@ -86,7 +84,7 @@ export class App {
     return this.cs.play(steps);
   }
 
-  /** 새 게임: 프롤로그(TTS 해설) → 조사 방법 → 오프닝(잠입·체포) → 1일차 */
+  /** 새 게임: 프롤로그(해설 자막) → 조사 방법 → 오프닝(잠입·체포) → 1일차 */
   private async startNew(seed = randomSeed(), withIntro = true) {
     this.state = G.newGame(seed);
     this.ui = freshUi();
@@ -202,14 +200,16 @@ export class App {
     const text = S.detainLine(id, detained, this.state!.detained.length + this.state!.day);
     this.ui.speech = { id, text };
     window.clearTimeout(this.speechTimer);
-    void tts.speak(text, voiceOf(id)).then(() => {
-      this.speechTimer = window.setTimeout(() => {
+    // 항변 대사는 말풍선 자막으로만 보여 주고, 읽을 시간이 지나면 닫는다
+    this.speechTimer = window.setTimeout(
+      () => {
         if (this.ui.speech?.text === text) {
           this.ui.speech = null;
           this.render();
         }
-      }, 1200);
-    });
+      },
+      readMs(text) + 1200,
+    );
   }
 
   private async executeConfirm() {
@@ -304,7 +304,6 @@ export class App {
         this.render();
         return;
       case 'title':
-        tts.cancel();
         this.screen = 'title';
         this.modal = null;
         this.render();
@@ -315,12 +314,6 @@ export class App {
         return this.openModal('settings', el);
       case 'close-modal':
         return this.closeModal();
-      case 'test-voice':
-        void tts.speak('묵안골에 오신 것을 환영합니다, 나리.', voiceOf('pojol-1')).then((ok) => {
-          if (!ok)
-            this.flash('이 브라우저에서 쓸 수 있는 한국어 음성을 찾지 못했습니다. 자막으로 진행됩니다.');
-        });
-        return;
       case 'clear-save':
         this.store.clear();
         this.state = null;
@@ -414,7 +407,6 @@ export class App {
     if (input.name === 'textScale')
       this.updateSettings({ textScale: Number(input.value) as Settings['textScale'] });
     if (input.name === 'reduceMotion') this.updateSettings({ reduceMotion: input.checked });
-    if (input.name === 'voiceOn') this.updateSettings({ voiceOn: input.checked });
     if (input.name === 'autoAdvance') this.updateSettings({ autoAdvance: input.checked });
   }
 
@@ -422,13 +414,10 @@ export class App {
     const el = e.target as HTMLInputElement;
     if (el.name === 'bgmVolume') this.updateSettings({ bgmVolume: Number(el.value) / 100 }, false);
     if (el.name === 'sfxVolume') this.updateSettings({ sfxVolume: Number(el.value) / 100 }, false);
-    if (el.name === 'voiceVolume') this.updateSettings({ voiceVolume: Number(el.value) / 100 }, false);
   }
 
   private applyAudioSettings() {
     sound.setVolumes(this.settings.bgmVolume, this.settings.sfxVolume);
-    tts.enabled = this.settings.voiceOn;
-    tts.volume = this.settings.voiceVolume;
   }
 
   private updateSettings(patch: Partial<Settings>, rerender = true) {
@@ -680,12 +669,6 @@ export class App {
     return html`<h2 id="modal-title">설정</h2>
       <div class="settings">
         ${range('bgmVolume', '배경음', st.bgmVolume)} ${range('sfxVolume', '효과음', st.sfxVolume)}
-        ${range('voiceVolume', '대사 음성', st.voiceVolume)}
-        <label
-          ><input type="checkbox" name="voiceOn" ${st.voiceOn ? raw('checked') : ''} /> 대사를 음성(TTS)으로
-          읽기</label
-        >
-        <button class="btn" data-action="test-voice">음성 들어 보기</button>
         <label
           ><input type="checkbox" name="autoAdvance" ${st.autoAdvance ? raw('checked') : ''} /> 대사 자동
           넘김</label
