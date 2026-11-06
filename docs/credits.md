@@ -24,8 +24,8 @@
 
 | 에셋 | 제작 | 라이선스 |
 | --- | --- | --- |
-| 배경음 4곡 (`audio/bgm-*.ogg`) | 동업자 (`audio-spec.md`) — 제작자, 도구, 생성형 AI 사용 여부 **기입 필요** | (기입 필요) |
-| 효과음 전체 | Web Audio API로 실시간 합성 (`src/audio/sound.ts`) — 동업자 효과음이 오면 교체 | 해당 없음 |
+| 배경음 7곡 (`audio/bgm-*.ogg`) | 동업자 (`audio-spec.md`) — 제작자, 도구, 생성형 AI 사용 여부 **기입 필요** | (기입 필요) |
+| 효과음 7종 (`audio/sfx-*.ogg`) | 동업자 — 제작자, 도구, 생성형 AI 사용 여부 **기입 필요**. 파일이 없을 때만 Web Audio 합성음(`src/audio/sound.ts`)을 쓴다 | (기입 필요) |
 | 대본·대사 | 개발 (`src/data/scripts.json`) | 자체 제작 |
 
 ## 라이브러리

@@ -56,7 +56,7 @@ npm run dev        # http://localhost:5173 개발 서버 (정답 DEBUG 패널 �
 - 대사와 해설은 전부 `src/data/scripts.json`에 있습니다. 코드를 건드리지 않고 문장만 고치면 됩니다.
 - `{victim}`, `{yokai}` 같은 변수와 `{이/가}`, `{은/는}`, `{을/를}` 조사는 자동으로 채워집니다.
 - 배역별 목소리(성별, 음높이, 빠르기)와 구속 항변 대사는 `src/data/suspects.json`에 있습니다.
-- 배경음은 `audio-spec.md`대로 화면마다 바뀝니다 (`src/ui/app.ts`의 `bgmTrack()`).
+- 배경음 7곡은 `audio-spec.md`대로 화면마다 바뀌고, 효과음 7종은 파일이 있으면 합성음 대신 쓰입니다 (`src/ui/app.ts`의 `bgmTrack()`).
 - 대사는 음성 없이 대사창 자막(한 글자씩 찍기)으로만 연출합니다. 자동 넘김은 글자 수에 맞춰 읽을 시간을 줍니다 (`src/ui/cutscene.ts`의 `readMs`).
 
 ## 아트 교체 방법

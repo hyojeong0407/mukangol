@@ -231,11 +231,13 @@ export class App {
 
   /** 화면별 배경음 (audio-spec.md 2장) */
   private bgmTrack(): BgmTrack {
-    if (this.screen === 'ending') return 'ending';
+    // 엔딩 화면: 결과에 따라 해피/게임 오버 곡 (처형 연출 중에는 아래에서 'ending')
+    if (this.screen === 'ending')
+      return this.state?.ending === 'happy' ? 'happy' : this.state?.ending ? 'gameover' : 'ending';
     if (this.screen !== 'game' || !this.state) return 'title';
     const s = this.state;
     if (s.phase === 'final' || s.ending) return 'ending';
-    if (s.phase === 'dawn') return 'title';
+    if (s.phase === 'dawn') return 'dawn';
     // 오후 옥사 화면은 심문 곡, 일지·기록판을 펼쳐 볼 때는 추리 곡
     if (s.phase === 'afternoon' && (this.ui.view === 'today' || this.cs.isActive)) return 'interrogation';
     return 'reasoning';

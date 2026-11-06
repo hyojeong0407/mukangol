@@ -74,7 +74,18 @@ async function pick(page: Page, ids: string[]) {
   await settle(page); // 처형 집행 연출
 }
 
+/** 요청된 배경음 파일 이름을 순서대로 모은다 */
+function listenBgm(page: Page) {
+  const heard: string[] = [];
+  page.on('request', (r) => {
+    const m = r.url().match(/audio\/(bgm-[a-z-]+)\.ogg/);
+    if (m && heard.at(-1) !== m[1]) heard.push(m[1]);
+  });
+  return heard;
+}
+
 test('해피 엔딩 경로', async ({ page }) => {
+  const heard = listenBgm(page);
   await playToFinal(page);
   const a = await answer(page);
   await pick(
@@ -82,13 +93,17 @@ test('해피 엔딩 경로', async ({ page }) => {
     a.all.filter((x) => x !== a.civilian),
   );
   await expect(page.getByRole('heading', { name: '해피 엔딩' })).toBeVisible();
+  await expect.poll(() => heard.at(-1)).toBe('bgm-ending-happy'); // 처형 곡 다음 해피 엔딩 곡
+  expect(heard).toContain('bgm-ending');
 });
 
 test('게임 오버 경로', async ({ page }) => {
+  const heard = listenBgm(page);
   await playToFinal(page);
   const a = await answer(page);
   await pick(page, [a.civilian, ...a.all.filter((x) => x !== a.civilian).slice(0, 3)]);
   await expect(page.getByRole('heading', { name: '게임 오버' })).toBeVisible();
+  await expect.poll(() => heard.at(-1)).toBe('bgm-ending-gameover');
 });
 
 test('이어하기와 기록판 사건별 표시', async ({ page }) => {
@@ -143,6 +158,7 @@ test('화면마다 동업자 배경음이 바뀐다 (audio-spec.md)', async ({ p
   await expect.poll(() => heard.at(-1)).toBe('bgm-title');
   await start(page); // 1일차 오전 사건 일지
   await expect.poll(() => heard.at(-1)).toBe('bgm-reasoning');
+  expect(heard).toContain('bgm-dawn'); // 새벽 사건 보고 곡 (일지 전에 지나감)
   await page.locator('[data-action="advance"]').click(); // 오후 옥사
   await settle(page);
   await expect.poll(() => heard).toContain('bgm-interrogation');

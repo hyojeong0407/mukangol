@@ -1,21 +1,44 @@
 /**
  * 사운드 관리.
- * - 배경음(BGM): 동업자 음원 audio/bgm-{title|reasoning|interrogation|ending}.ogg (audio-spec.md).
+ * - 배경음(BGM): 동업자 음원 audio/bgm-{title|dawn|reasoning|interrogation|ending|ending-happy|ending-gameover}.ogg (audio-spec.md).
  *   화면이 바뀌면 이전 곡은 페이드아웃, 새 곡은 페이드인한다. 파일이 없으면 합성 드론으로 대신한다.
  * - 효과음: audio/sfx-{종류}.ogg 가 있으면 그 파일, 없으면 Web Audio 합성음.
  * 브라우저 정책상 첫 사용자 입력 이후에만 소리가 난다.
  */
 export type Sfx = 'paper' | 'stamp' | 'gong' | 'click' | 'reveal' | 'heartbeat' | 'rooster';
-export type BgmTrack = 'title' | 'reasoning' | 'interrogation' | 'ending';
+export type BgmTrack = 'title' | 'dawn' | 'reasoning' | 'interrogation' | 'ending' | 'happy' | 'gameover';
+
+/** 트랙 이름 → 음원 파일 이름 (audio/ 폴더 기준, 확장자 제외) */
+const FILE_OF: Record<BgmTrack, string> = {
+  title: 'bgm-title',
+  dawn: 'bgm-dawn',
+  reasoning: 'bgm-reasoning',
+  interrogation: 'bgm-interrogation',
+  ending: 'bgm-ending',
+  happy: 'bgm-ending-happy',
+  gameover: 'bgm-ending-gameover',
+};
 
 /** audio-spec.md 2장: 반복 재생 여부 */
-const LOOP: Record<BgmTrack, boolean> = { title: true, reasoning: true, interrogation: true, ending: false };
+// 처형 곡(ending)만 한 번 재생. 엔딩 화면은 머무는 시간이 정해져 있지 않아 반복한다.
+const LOOP: Record<BgmTrack, boolean> = {
+  title: true,
+  dawn: true,
+  reasoning: true,
+  interrogation: true,
+  ending: false,
+  happy: true,
+  gameover: true,
+};
 /** 음원 파일이 없을 때 합성 드론의 분위기 */
 const SYNTH_MOOD: Record<BgmTrack, 'calm' | 'tense'> = {
   title: 'calm',
+  dawn: 'calm',
   reasoning: 'calm',
   interrogation: 'tense',
   ending: 'tense',
+  happy: 'calm',
+  gameover: 'tense',
 };
 const FADE_MS = 1200;
 const BGM_LEVEL = 0.6; // 효과음이 묻히지 않도록 배경음 상한
@@ -73,7 +96,7 @@ class SoundManager {
     if (track === this.track) return;
     this.track = track;
     if (!this.ctx) return; // 첫 입력 뒤 unlock()에서 재생
-    const src = track ? this.files.get(`bgm-${track}`) : undefined;
+    const src = track ? this.files.get(FILE_OF[track]) : undefined;
     // 이전 곡 페이드아웃
     if (this.current) this.fadeTo(this.current, 0, true);
     this.current = null;
@@ -208,7 +231,7 @@ class SoundManager {
     }
     // 목록이 늦게 도착했으면 지금 곡을 파일로 다시 튼다
     const t = this.track;
-    if (t && this.ctx && !this.current && this.files.has(`bgm-${t}`)) {
+    if (t && this.ctx && !this.current && this.files.has(FILE_OF[t])) {
       this.track = null;
       this.mood = 'none';
       this.setBgm(t);

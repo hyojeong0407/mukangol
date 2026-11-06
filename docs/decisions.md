@@ -22,7 +22,7 @@
 | D-16 | 심문 방식 (D-4 변경) | 주인공이 옥사 포졸에게 "무엇을 캐물어 올지" 넷을 지시하고, 잠시 후 포졸이 돌아와 보고한다. 순찰 포졸과 옥사 포졸은 날마다 다른 사람. | `src/ui/story.ts` |
 | D-17 | 검험 기록판 (D-7 확장) | 사건(일차)마다 한 페이지. 위에 그날 사건 단서, 아래에 5 × 6 표. 도장은 페이지마다 따로 남고, 페이지마다 범인 추정을 고른다. 종합 페이지에서 모아 본다. 저장 형식 v2 (v1 저장은 1일차 페이지로 옮김). | `src/ui/views.ts`, `src/state/save.ts` |
 | D-18 | 처형 화면 | 지목한 카드는 요괴 모습으로 뒤집힌다(정체 누설 아님: 대응이 고정이므로). 집행 연출에서 진짜 요괴는 본모습이 드러나고, 사람은 사람으로 쓰러진다. 요괴 그림이 오기 전까지는 사람 초상에 효과를 입힌 임시 표현. | `src/ui/assets.ts` |
-| D-20 | 배경음 연결 (`audio-spec.md`) | 타이틀·프롤로그·오프닝·새벽 → `bgm-title`, 오전 일지·밤·심문 일지·검험 기록판 → `bgm-reasoning`, 오후 옥사(심문 지시·보고) → `bgm-interrogation`, 5일차 처형·집행·엔딩 → `bgm-ending`. 곡이 바뀔 때 1.2초 페이드아웃/인. `bgm-ending`만 반복 없음. 파일이 없으면 합성 드론. | `src/audio/sound.ts`, `src/ui/app.ts` `bgmTrack()` |
+| D-20 | 배경음 연결 (`audio-spec.md`) | 타이틀·프롤로그·오프닝 → `bgm-title`, 매일 새벽 → `bgm-dawn`, 오전 일지·밤·심문 일지·검험 기록판 → `bgm-reasoning`, 오후 옥사(심문 지시·보고) → `bgm-interrogation`, 5일차 처형·집행 → `bgm-ending`(반복 없음), 엔딩 화면 → `bgm-ending-happy` / `bgm-ending-gameover`(결과에 따라, 반복). 곡이 바뀔 때 1.2초 페이드아웃/인. 파일이 없으면 합성 드론. | `src/audio/sound.ts`, `src/ui/app.ts` `bgmTrack()` |
 | D-19 | 동업자 에셋 자동 반영 | `npm run assets`가 `characters/`, `backgrounds/`를 변환한다. 음원(`audio/`) 복사와 `manifest.json` 작성은 `npm run dev`/`build` 때 자동(`sync-assets.mjs`). 게임은 목록에 있는 파일만 쓰고 없으면 임시 표현. `public/audio/`와 `manifest.json`은 생성물이라 git에서 제외. | `scripts/convert-assets.mjs` |
 
 ## 밸런스 관찰 (1만 판 시뮬레이션)
