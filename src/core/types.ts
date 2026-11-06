@@ -25,8 +25,14 @@ export interface Board {
   /** 1~4일차에 사건을 일으키는 요괴 */
   eventOrder: SuspectId[];
   incidents: Incident[];
-  /** 일차별 힌트 (5일 × 4개) */
-  hintSchedule: Hint[][];
+  /**
+   * 요괴마다 심문에서 수법이 나오는 순서 (6종을 무작위로 섞은 것).
+   * 플레이어가 그 요괴를 고를 때마다 앞에서부터 하나씩 나온다. 한 번 나온 종류는 다시 나오지 않는다.
+   * 시드로 정해 두므로 다시 불러와도 같은 답이 나온다.
+   */
+  askOrder: Record<SuspectId, CategoryId[]>;
+  /** 값이 겹친 곳 (디버그·테스트용). 플레이어에게는 보여 주지 않는다. */
+  duplicates: { category: CategoryId; value: string; suspects: [SuspectId, SuspectId] }[];
   /** 생성에 걸린 시도 횟수 (디버그용) */
   attempts: number;
 }
@@ -53,8 +59,7 @@ export interface GameState {
   incidentLog: Incident[];
   /** 획득한 힌트 (얻은 일차 포함) */
   interrogationLog: (Hint & { day: number })[];
-  /** 오늘 배정된 힌트 중 아직 묻지 않은 것의 인덱스 */
-  pendingQuestions: number[];
+  /** 오늘 남은 질문 포인트 */
   questionPoints: number;
   detained: SuspectId[];
   executed: SuspectId[];

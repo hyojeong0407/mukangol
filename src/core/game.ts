@@ -1,5 +1,5 @@
 import { CONFIG } from '../config';
-import type { CategoryId } from './data';
+import { SUSPECT_IDS, type CategoryId } from './data';
 import { generateBoard } from './generate';
 import type { Ending, GameState, Mark, Phase, SuspectId } from './types';
 
@@ -9,6 +9,7 @@ import type { Ending, GameState, Mark, Phase, SuspectId } from './types';
  *
  * 1~4일차: dawn → morning(사건 일지 공개) → afternoon(심문) → night(구속) → 다음 날 dawn
  * 5일차:   dawn(사건 없음) → afternoon(오전 심문) → final(처형) → 엔딩
+ * 질문 포인트는 CONFIG.questionsByDay (1~4일차 2개, 5일차 3개).
  */
 
 export class RuleError extends Error {}
@@ -25,7 +26,6 @@ export function newGame(seed: string, now = Date.now()): GameState {
     phase: 'dawn',
     incidentLog: [],
     interrogationLog: [],
-    pendingQuestions: [],
     questionPoints: 0,
     detained: [],
     executed: [],
@@ -41,7 +41,7 @@ export const isFinalDay = (s: GameState) => s.day === CONFIG.totalDays;
 /** 다음 단계로 넘어갈 수 있는지와 그 이유 */
 export function canAdvance(s: GameState): { ok: boolean; reason?: string } {
   if (s.ending) return { ok: false, reason: '이미 끝난 판입니다.' };
-  if (s.phase === 'afternoon' && s.pendingQuestions.length > 0)
+  if (s.phase === 'afternoon' && s.questionPoints > 0 && askableSuspects(s).length > 0)
     return { ok: false, reason: '질문 포인트를 모두 써야 합니다.' };
   if (s.phase === 'final') return { ok: false, reason: '처형할 4명을 지목하세요.' };
   return { ok: true };
@@ -74,22 +74,36 @@ export function advance(prev: GameState, now = Date.now()): GameState {
     if (inc && !s.incidentLog.some((x) => x.day === inc.day)) s.incidentLog.push(clone(inc));
   }
   if (s.phase === 'afternoon') {
-    s.questionPoints = CONFIG.questionPointsPerDay;
-    s.pendingQuestions = s.board.hintSchedule[s.day - 1].map((_, i) => i);
+    s.questionPoints = CONFIG.questionsByDay[s.day - 1] ?? 0;
   }
   s.updatedAt = now;
   return s;
 }
 
-/** 오늘 배정된 질문 중 하나를 골라 묻는다. 결과 힌트는 시드로 정해져 있다. (5-4) */
-export function ask(prev: GameState, questionIndex: number, now = Date.now()): GameState {
+/** 이 요괴에게서 이미 나온 수법 종류 수 */
+export const askedCount = (s: GameState, id: SuspectId) =>
+  s.interrogationLog.filter((h) => h.suspectId === id).length;
+
+/** 이 요괴에게서 아직 나오지 않은 수법 종류 수 (0이면 더 물을 것이 없다) */
+export const remainingFor = (s: GameState, id: SuspectId) => s.board.askOrder[id].length - askedCount(s, id);
+
+/** 지금 물을 수 있는 요괴 */
+export const askableSuspects = (s: GameState) => SUSPECT_IDS.filter((id) => remainingFor(s, id) > 0);
+
+/**
+ * 요괴 하나를 골라 묻는다 (5-4). 그 요괴의 6가지 수법 중 아직 안 나온 것이 하나 나온다.
+ * 나오는 순서는 판을 만들 때 무작위로 정해 두었으므로(askOrder) 다시 불러와도 같다.
+ */
+export function ask(prev: GameState, suspectId: SuspectId, now = Date.now()): GameState {
   if (prev.phase !== 'afternoon') throw new RuleError('심문은 오후에만 할 수 있습니다.');
   if (prev.questionPoints <= 0) throw new RuleError('질문 포인트가 없습니다.');
-  if (!prev.pendingQuestions.includes(questionIndex)) throw new RuleError('이미 물은 질문입니다.');
+  const order = prev.board.askOrder[suspectId];
+  if (!order) throw new RuleError('없는 용의자입니다.');
+  const n = askedCount(prev, suspectId);
+  if (n >= order.length) throw new RuleError('이 요괴에게서는 더 캐낼 것이 없습니다.');
   const s = clone(prev);
-  const hint = s.board.hintSchedule[s.day - 1][questionIndex];
-  s.interrogationLog.push({ ...hint, day: s.day });
-  s.pendingQuestions = s.pendingQuestions.filter((i) => i !== questionIndex);
+  const category = order[n];
+  s.interrogationLog.push({ suspectId, category, value: s.board.profiles[suspectId][category], day: s.day });
   s.questionPoints -= 1;
   s.updatedAt = now;
   return s;

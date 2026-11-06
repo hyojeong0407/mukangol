@@ -1,7 +1,6 @@
-import { CONFIG } from '../config';
+import { CONFIG, TOTAL_QUESTIONS } from '../config';
 import { CATEGORIES, CATEGORY_IDS, SUSPECTS, TEXTS, category, clueValue, suspect } from '../core/data';
-import { canAdvance, canDetainNow, markKey } from '../core/game';
-import { josa } from '../core/josa';
+import { askableSuspects, canAdvance, canDetainNow, markKey, remainingFor } from '../core/game';
 import type { GameState, Hint, Incident, Mark } from '../core/types';
 import { suspectPortrait } from './assets';
 import { circleSvg } from './circles';
@@ -139,16 +138,16 @@ function morningView(s: GameState): Raw {
 
 /** 옥사: 포졸에게 무엇을 캐물어 올지 지시한다. 결과는 포졸이 돌아와 보고한다. */
 function afternoonView(s: GameState, ui: UiState): Raw {
-  const today = s.board.hintSchedule[s.day - 1];
   const asked = s.interrogationLog.filter((h) => h.day === s.day);
   const jailer = jailerOf(s.day);
   const jailerInfo = { 'pojol-1': '박 포졸', 'pojol-2': '강 포졸', 'pojol-3': '오 포졸' }[jailer];
+  const todayPoints = CONFIG.questionsByDay[s.day - 1] ?? 0;
   const points = Array.from(
-    { length: CONFIG.questionPointsPerDay },
+    { length: todayPoints },
     (_, i) =>
       html`<span class="qp ${i < s.questionPoints ? 'qp-full' : 'qp-empty'}" aria-hidden="true">符</span>`,
   );
-  const done = s.pendingQuestions.length === 0;
+  const done = s.questionPoints === 0 || askableSuspects(s).length === 0;
   return html`<section class="interrogate">
     <figure class="shaman">
       ${castPortrait(`images/characters/char-${jailer}-default.webp`, `${jailerInfo}`)}
@@ -161,28 +160,41 @@ function afternoonView(s: GameState, ui: UiState): Raw {
             ? ui.reportPending
               ? '「다녀오겠습니다, 나리!」'
               : '「현암 놈이 한 말은 심문 일지에 모두 적었습니다.」'
-            : '「무엇을 캐물어 올까요, 나리?」'
+            : '「어느 요괴에 대해 캐물어 올까요, 나리?」'
         }
       </div>
       <div class="qp-row" aria-label="남은 질문 ${s.questionPoints}개">질문 ${points}</div>
-      <ul class="questions">
-        ${s.pendingQuestions.map((i) => {
-          const h = today[i];
-          return html`<li>
-            <button class="btn btn-question" data-action="ask" data-q="${i}">
-              <b>${suspect(h.suspectId).yokai}</b>의
-              <b>${category(h.category).name}</b>${josa(category(h.category).name, '을/를')} 캐물어라
-            </button>
-          </li>`;
-        })}
-      </ul>
+      ${
+        done
+          ? ''
+          : html`<p class="help">
+                요괴를 고르면 그 요괴의 수법 여섯 가지 중 아직 듣지 못한 것 하나를 캐물어 옵니다. 어떤 수법이
+                나올지는 정할 수 없습니다.
+              </p>
+              <ul class="questions">
+                ${SUSPECTS.map((p) => {
+                  const left = remainingFor(s, p.id);
+                  return html`<li>
+                    <button
+                      class="btn btn-question"
+                      data-action="ask"
+                      data-id="${p.id}"
+                      ${left > 0 ? '' : raw('disabled')}
+                    >
+                      <b>${p.yokai}</b>에 대해 캐물어라
+                      <small class="dim">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
+                    </button>
+                  </li>`;
+                })}
+              </ul>`
+      }
       ${
         asked.length
           ? html`<h3 class="sub-h">${ui.reportPending ? '내린 지시' : '오늘 받아 온 답'}</h3>
               <ol class="hint-list">
                 ${asked.map((h) =>
                   ui.reportPending
-                    ? html`<li><b>${suspect(h.suspectId).yokai}</b>의 ${category(h.category).name}</li>`
+                    ? html`<li><b>${suspect(h.suspectId).yokai}</b>에 대해</li>`
                     : html`<li>${hintLine(h)}</li>`,
                 )}
               </ol>`
@@ -343,7 +355,7 @@ export function interrogationView(s: GameState, ui: UiState): Raw {
   return html`<section class="paper">
     ${toggle}
     <p class="help">
-      주술사가 말한 요괴의 수법입니다. 얻은 힌트 ${log.length} / ${CONFIG.totalHints}. 요괴와 아낙의 대응은
+      주술사가 말한 요괴의 수법입니다. 얻은 힌트 ${log.length} / ${TOTAL_QUESTIONS}. 요괴와 아낙의 대응은
       용의자 화면에 있습니다.
     </p>
     <div class="hint-groups">

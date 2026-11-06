@@ -1,5 +1,5 @@
 import { CONFIG } from '../config';
-import { CATEGORIES, TEXTS, category, clueValue, suspect } from '../core/data';
+import { CATEGORIES, TEXTS, clueValue, suspect } from '../core/data';
 import { fill } from '../core/josa';
 import type { GameState, Hint } from '../core/types';
 import scripts from '../data/scripts.json';
@@ -110,7 +110,7 @@ export function orderSteps(h: Hint): Step[] {
     {
       t: 'line',
       who: 'protagonist',
-      text: fill(scripts.prison.order, { yokai: suspect(h.suspectId).yokai, cat: category(h.category).name }),
+      text: fill(scripts.prison.order, { yokai: suspect(h.suspectId).yokai }),
     },
   ];
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fill, josa } from '../../src/core/josa';
-import { advance, ask, newGame } from '../../src/core/game';
+import { advance, ask, askableSuspects, newGame } from '../../src/core/game';
+import { CONFIG } from '../../src/config';
 import { SUSPECTS } from '../../src/core/data';
 import * as S from '../../src/ui/story';
 
@@ -35,10 +36,10 @@ describe('연출 대본', () => {
   });
   it('오후: 심문 보고는 요괴 이름으로 말한다', () => {
     let s = advance(advance(s0, 0), 0);
-    for (const q of [...s.pendingQuestions]) s = ask(s, q, 0);
+    while (s.questionPoints > 0) s = ask(s, askableSuspects(s)[0], 0);
     const steps = S.reportSteps(s);
     const hintSteps = steps.filter((x) => x.t === 'hints');
-    expect(hintSteps).toHaveLength(4);
+    expect(hintSteps).toHaveLength(CONFIG.questionsByDay[0]);
     const yokai = SUSPECTS.map((p) => p.yokai);
     for (const h of hintSteps) expect(yokai.some((y) => h.text.startsWith(`「${y}`))).toBe(true);
     // 이름은 대사에 나오지 않는다

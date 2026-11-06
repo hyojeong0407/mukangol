@@ -39,9 +39,11 @@ async function start(page: Page) {
   await settle(page); // 오프닝 → 1일차 새벽 → 사건 일지
 }
 
+/** 질문 포인트를 다 쓸 때까지 요괴를 골라 묻는다 (1~4일차 2개, 5일차 3개) */
 async function interrogate(page: Page) {
-  for (let i = 0; i < 4; i++) {
-    await page.locator('[data-action="ask"]').first().click();
+  const btn = page.locator('[data-action="ask"]:not([disabled])');
+  for (let i = 0; i < 10 && (await btn.count()) > 0; i++) {
+    await btn.nth(i % (await btn.count())).click();
     await settle(page);
   }
   await expect(page.locator('.hint-group li')).not.toHaveCount(0); // 보고 후 심문 일지

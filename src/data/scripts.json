@@ -170,7 +170,7 @@
         {
           "t": "line",
           "who": "protagonist",
-          "text": "저자가 대답하는 것은 하루에 넷뿐이라 했다. 무엇을 물을지는 내가 정한다."
+          "text": "저자가 대답하는 것은 하루에 둘뿐이라 했다. 어느 놈을 캘지는 내가 정한다. 무엇이 나올지는 저자 입에 달렸지."
         },
         { "t": "line", "who": "{jailer}", "text": "예, 나리! 무엇부터 물어 올까요?" }
       ],
@@ -181,8 +181,8 @@
           "bg": "prison",
           "mood": "day"
         },
-        { "t": "line", "who": "{jailer}", "text": "오늘은 제가 다녀오겠습니다, 나리. 넷이지요?" },
-        { "t": "line", "who": "protagonist", "text": "그래. 내가 짚는 순서대로 물어라." }
+        { "t": "line", "who": "{jailer}", "text": "오늘은 제가 다녀오겠습니다, 나리. 오늘도 둘이지요?" },
+        { "t": "line", "who": "protagonist", "text": "그래. 내가 짚는 놈에 대해서만 물어라." }
       ],
       [
         {
@@ -208,10 +208,14 @@
       [
         { "t": "narr", "text": "마지막 심문. 현암이 먼저 눈을 떴다.", "bg": "prison", "mood": "final" },
         { "t": "line", "who": "{jailer}", "text": "마지막 심문입니다, 나리." },
-        { "t": "line", "who": "protagonist", "text": "이번에도 넷이다. 하나도 빠뜨리지 말고 받아 와라." }
+        {
+          "t": "line",
+          "who": "protagonist",
+          "text": "마지막이라 셋을 내준다더구나. 하나도 빠뜨리지 말고 받아 와라."
+        }
       ]
     ],
-    "order": "{yokai}의 {cat}{을/를} 캐물어라.",
+    "order": "{yokai}에 대해 캐물어라.",
     "reportTitle": "반 시진 후",
     "reportIntro": "다녀왔습니다, 나리. 현암 놈이 이리 말했습니다.",
     "relay": "「{yokai}{은/는} {hint}.」",

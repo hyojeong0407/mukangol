@@ -7,14 +7,16 @@ export const CONFIG = {
   totalDays: 5,
   /** 사건이 일어나는 날 수 (요괴 수와 같다) */
   incidentDays: 4,
-  /** 하루 질문 포인트 */
-  questionPointsPerDay: 4,
-  /** 5일 동안 얻는 힌트 수 (30개 중) */
-  totalHints: 20,
-  /** 용의자마다 최소로 보장되는 힌트 수 (서로 다른 단서 종류) */
-  minHintsPerSuspect: 3,
-  /** 1~2일차(힌트 8개)에 한 용의자의 힌트가 몰리지 않도록 하는 상한 */
-  maxEarlyHintsPerSuspect: 3,
+  /**
+   * 일차별 질문 포인트 (1~4일차 2개, 5일차 3개 → 30개 중 11개).
+   * 질문 하나 = 요괴 하나를 골라 묻기. 그 요괴의 6가지 수법 중 아직 안 나온 것이 무작위로 하나 나온다.
+   */
+  questionsByDay: [2, 2, 2, 2, 3] as readonly number[],
+  /**
+   * 판마다 값이 겹치는 쌍의 수 (최소~최대). 겹침 하나 = 한 단서 종류에서 두 요괴가 같은 값을 쓴다.
+   * 겹친 종류마다 아무도 쓰지 않는 값이 하나 생긴다. 서로 다른 단서 종류에서만 겹친다.
+   */
+  duplicates: { min: 1, max: 3 },
   /** 판 생성 시 해 검증 실패 시 재시도 상한 */
   maxGenerationAttempts: 500,
   /**
@@ -25,8 +27,11 @@ export const CONFIG = {
   /** 처형 시 지목해야 하는 인원 */
   executionCount: 4,
   /** 저장 형식 버전 */
-  saveVersion: 2,
+  saveVersion: 3,
 } as const;
+
+/** 5일 동안 얻는 힌트 수 */
+export const TOTAL_QUESTIONS = CONFIG.questionsByDay.reduce((a, b) => a + b, 0);
 
 export const STORAGE_KEYS = {
   save: 'mukangol.save.v1',

@@ -30,6 +30,8 @@ const MIGRATIONS: Record<number, Migration> = {
     for (const [k, v] of Object.entries(notes.marks ?? {})) marks[k.includes('|') ? k : `1|${k}`] = v;
     return { ...raw, notes: { ...notes, marks }, version: 2 };
   },
+  // v2 → v3: 없음. 심문이 "정해진 질문"에서 "요괴를 골라 묻기"로 바뀌고 판 구조(askOrder, 값 겹침)가 달라져
+  // 예전 판을 이어 갈 수 없다. 이어하기에서 안내하고 새 게임을 시작한다.
 };
 
 export type LoadResult =

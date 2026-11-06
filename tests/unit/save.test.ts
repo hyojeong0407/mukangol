@@ -33,14 +33,12 @@ describe('저장', () => {
     expect(migrate({ version: 99 }).status).toBe('incompatible');
     expect(migrate({ version: 0 }).status).toBe('incompatible');
   });
-  it('v1 저장(기록판 표시가 일차 구분 없음)을 v2로 옮긴다', () => {
+  it('v1·v2 저장은 심문 방식이 바뀌어(v3) 불러올 수 없다', () => {
     const s = newGame('MIG', 0);
-    const v1 = { ...s, version: 1, notes: { marks: { 'mul:corpse': 'possible' }, culprits: {} } };
-    const r = migrate(JSON.parse(JSON.stringify(v1)));
-    expect(r.status).toBe('ok');
-    if (r.status === 'ok') {
-      expect(r.state.version).toBe(2);
-      expect(r.state.notes.marks).toEqual({ '1|mul:corpse': 'possible' });
+    for (const version of [1, 2]) {
+      const old = { ...s, version, notes: { marks: { 'mul:corpse': 'possible' }, culprits: {} } };
+      const r = migrate(JSON.parse(JSON.stringify(old)));
+      expect(r.status).toBe('incompatible');
     }
   });
   it('저장소가 없어도 동작', () => {

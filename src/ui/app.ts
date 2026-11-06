@@ -163,12 +163,17 @@ export class App {
     }
   }
 
-  private async ask(q: number) {
+  private async ask(id: string) {
     const s = this.state!;
-    const next = G.ask(s, q);
+    const next = G.ask(s, id);
     this.commit(next, 'click');
     await this.play(S.orderSteps(next.interrogationLog.at(-1)!));
-    if (this.state && this.state.pendingQuestions.length === 0 && this.ui.reportPending) await this.report();
+    if (
+      this.state &&
+      (this.state.questionPoints === 0 || G.askableSuspects(this.state).length === 0) &&
+      this.ui.reportPending
+    )
+      await this.report();
   }
 
   /** 잠시 후, 포졸이 심문 결과를 보고한다 → 심문 일지 */
@@ -338,7 +343,7 @@ export class App {
       case 'advance':
         return this.advance();
       case 'ask':
-        return this.ask(Number(el.dataset.q));
+        return this.ask(el.dataset.id ?? '');
       case 'report':
         return this.report();
       case 'replay':
@@ -541,8 +546,9 @@ export class App {
             <b>오전</b> 포졸이 <b>사건 일지</b>를 읽어 준다. 6종 단서는 그 사건을 일으킨 요괴의 수법이다.
           </li>
           <li style="--i:2">
-            <b>오후</b> 포졸을 옥사로 보내 주술사를 심문한다. 하루 넷을 물어 오면 "어느 요괴가 어떤 수법을
-            쓰는지"가 <b>심문 일지</b>에 적힌다. 주술사의 말에는 거짓이 없다.
+            <b>오후</b> 포졸을 옥사로 보내 주술사를 심문한다. 하루 둘(마지막 날은 셋), <b>어느 요괴</b>에 대해
+            물을지 고르면 그 요괴의 수법 하나가 <b>심문 일지</b>에 적힌다. 어떤 수법이 나올지는 고를 수 없고,
+            같은 수법은 두 번 나오지 않는다. 주술사의 말에는 거짓이 없다. 수법은 두 요괴가 겹쳐 쓰기도 한다.
           </li>
           <li style="--i:3">
             <b>밤</b> <b>검험 기록판</b>에서 사건마다 단서와 힌트를 대조하고, 의심되는 자를 구속해 둔다.
