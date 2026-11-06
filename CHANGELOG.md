@@ -1,5 +1,17 @@
 # 변경 기록
 
+## v0.3.0 — 2026-11-06
+
+동업자 이미지(배경·요괴 본모습·소환진) 반영.
+
+- 장면 배경 14종 적용 (`backgrounds/` → `public/images/backgrounds/*.webp`): 고을 어귀·사당·결계 문·옥사·처형장·새벽·밤·사건 장소 5곳·엔딩 2종
+- 요괴 본모습 5종 적용 (`characters/*-yokai.png`): 처형 연출·엔딩의 임시 효과를 그림으로 교체
+- 캐릭터 10종을 투명 배경 v2(`*-default-v2.png`, 1600×2000)로 교체. 변환 스크립트는 v2가 있으면 이전 파일을 건너뛴다
+- 소환진 5종 적용 (`ui-assets/circle-*.png` → `public/images/circles/`): 사건 일지·컷신의 진 도형. 파일이 없으면 기존 SVG를 쓴다
+- `convert-assets.mjs`에 소환진 변환 추가, `sync-assets.mjs` manifest에 circles 포함
+- 변환된 WebP를 저장소에 포함 (Netlify/Vercel 빌드는 sharp 변환 없이 `public/`을 그대로 쓴다)
+- `playwright.config.ts`: `PW_EXE`로 브라우저 실행 파일 지정 가능
+
 ## v0.2.2 — 2026-11-05
 
 - 대사 음성(TTS) 삭제: 프롤로그 해설, 대사, 사건 일지·심문 보고, 구속 항변을 모두 대사창·말풍선 자막으로만 연출

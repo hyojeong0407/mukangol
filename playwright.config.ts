@@ -10,6 +10,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     // 로컬에 설치된 Chrome을 쓰려면 PW_CHANNEL=chrome
     channel: process.env.PW_CHANNEL || undefined,
+    launchOptions: process.env.PW_EXE ? { executablePath: process.env.PW_EXE } : undefined,
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 } } },

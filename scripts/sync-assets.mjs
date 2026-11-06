@@ -29,7 +29,7 @@ for (const dir of AUDIO_FROM) {
 }
 
 const files = [];
-for (const base of ['images/characters', 'images/backgrounds', 'audio']) {
+for (const base of ['images/characters', 'images/backgrounds', 'images/circles', 'audio']) {
   const dir = join('public', base);
   if (!existsSync(dir)) continue;
   for (const f of readdirSync(dir)) if (!f.startsWith('.')) files.push(`${base}/${f}`);

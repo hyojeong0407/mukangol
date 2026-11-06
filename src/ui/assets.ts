@@ -62,3 +62,13 @@ export function suspectPortrait(id: string, form: 'human' | 'yokai' = 'human', c
     <span class="yokai-name brush" aria-hidden="true">${s.yokai}</span>
   </span>`;
 }
+
+// 진 값 id → 동업자 도형 파일 (역팔괘진은 파일명이 reverse-eight)
+const CIRCLE_FILE: Record<string, string> = { reverse_bagua: 'reverse-eight' };
+
+/** 소환진 도형 이미지. 없으면 null → 코드로 그린 SVG를 쓴다. */
+export function circleSrc(valueId: string): string | null {
+  const name = CIRCLE_FILE[valueId] ?? valueId.replace(/_/g, '-');
+  const p = `images/circles/circle-${name}.webp`;
+  return files.has(p) ? p : null;
+}

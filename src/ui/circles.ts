@@ -1,7 +1,17 @@
 /**
- * 소환진 5종 도형 (임시 에셋). 동업자의 확정 도형(circle-*.png)이 오면 교체한다.
+ * 소환진 5종 도형 (대체용 SVG). 동업자 도형(circle-*.webp)이 있으면 circleSvg가 그것을 먼저 쓴다.
  * 명세 4-5의 형태 단서를 따르며, 보호 문양이 아닌 "뒤집힌" 불길한 문양으로 그린다.
  */
+import { circleSrc } from './assets';
+
+const NAME: Record<string, string> = {
+  blood_five: '혈오방진',
+  reverse_bagua: '역팔괘진',
+  black_seven: '흑칠성진',
+  reverse_rope: '역금줄진',
+  ghost_gate: '귀문구궁진',
+};
+
 const INK = 'var(--ink-line)';
 const BLOOD = 'var(--blood)';
 
@@ -129,5 +139,8 @@ const DRAW: Record<string, () => string> = {
 };
 
 export function circleSvg(valueId: string): string {
+  const img = circleSrc(valueId);
+  if (img)
+    return `<img class="circle-svg circle-img" src="${img}" alt="${NAME[valueId] ?? '소환진'}" loading="lazy" width="256" height="256"/>`;
   return (DRAW[valueId] ?? bloodFive)();
 }
