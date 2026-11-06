@@ -136,7 +136,7 @@ function morningView(s: GameState): Raw {
   </section>`;
 }
 
-/** 옥사: 포졸에게 무엇을 캐물어 올지 지시한다. 결과는 포졸이 돌아와 보고한다. */
+/** 옥사: 어느 요괴에 대해 캐물어 올지 포졸에게 지시한다. 어떤 수법이 나올지는 무작위. 결과는 포졸이 돌아와 보고한다. */
 function afternoonView(s: GameState, ui: UiState): Raw {
   const asked = s.interrogationLog.filter((h) => h.day === s.day);
   const jailer = jailerOf(s.day);

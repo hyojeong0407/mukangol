@@ -34,12 +34,12 @@ async function answer(page: Page) {
 async function start(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: '새 게임' }).click();
-  await settle(page); // 프롤로그
-  await page.getByRole('button', { name: /묵안골로 들어간다/ }).click();
-  await settle(page); // 오프닝 → 1일차 새벽 → 사건 일지
+  await settle(page); // 프롤로그 → 오프닝
+  await page.getByRole('button', { name: /첫 새벽을 맞는다/ }).click();
+  await settle(page); // 1일차 새벽 → 사건 일지
 }
 
-/** 질문 포인트를 다 쓸 때까지 요괴를 골라 묻는다 (1~4일차 2개, 5일차 3개) */
+/** 질문 포인트를 다 쓸 때까지 요괴를 골라 묻는다 (매일 2개) */
 async function interrogate(page: Page) {
   const btn = page.locator('[data-action="ask"]:not([disabled])');
   for (let i = 0; i < 10 && (await btn.count()) > 0; i++) {
@@ -145,7 +145,7 @@ test('연출 레이어와 컷신이 오류 없이 뜬다', async ({ page }) => {
   await expect(page.locator('.cs-root')).toBeVisible();
   await page.locator('.cs-root').click(); // 한 장면 넘기기
   await settle(page);
-  await expect(page.getByRole('button', { name: /묵안골로 들어간다/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /첫 새벽을 맞는다/ })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

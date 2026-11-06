@@ -84,7 +84,7 @@ export class App {
     return this.cs.play(steps);
   }
 
-  /** 새 게임: 프롤로그(해설 자막) → 조사 방법 → 오프닝(잠입·체포) → 1일차 */
+  /** 새 게임: 프롤로그(해설 자막) → 오프닝(잠입·체포·결계) → 조사 방법 → 1일차 새벽 */
   private async startNew(seed = randomSeed(), withIntro = true) {
     this.state = G.newGame(seed);
     this.ui = freshUi();
@@ -93,6 +93,7 @@ export class App {
       this.screen = 'intro';
       this.render();
       await this.play(S.prologueSteps());
+      await this.play(S.openingSteps());
       this.screen = 'howto';
       this.render();
       return;
@@ -102,10 +103,8 @@ export class App {
     await this.onPhaseEnter();
   }
 
+  /** 조사 방법을 읽고 나면 바로 1일차 새벽이 시작된다 */
   private async afterHowto() {
-    this.screen = 'intro';
-    this.render();
-    await this.play(S.openingSteps());
     this.screen = 'game';
     this.render();
     await this.onPhaseEnter();
@@ -546,9 +545,10 @@ export class App {
             <b>오전</b> 포졸이 <b>사건 일지</b>를 읽어 준다. 6종 단서는 그 사건을 일으킨 요괴의 수법이다.
           </li>
           <li style="--i:2">
-            <b>오후</b> 포졸을 옥사로 보내 주술사를 심문한다. 하루 둘(마지막 날은 셋), <b>어느 요괴</b>에 대해
-            물을지 고르면 그 요괴의 수법 하나가 <b>심문 일지</b>에 적힌다. 어떤 수법이 나올지는 고를 수 없고,
-            같은 수법은 두 번 나오지 않는다. 주술사의 말에는 거짓이 없다. 수법은 두 요괴가 겹쳐 쓰기도 한다.
+            <b>오후</b> 포졸을 옥사로 보내 주술사를 심문한다. 하루 두 번, 다섯 요괴 중 <b>하나를 고르면</b> 그
+            요괴의 수법 여섯 가지(훼손·유인·재물·언어·장소·진) 중 하나가 <b>무작위로</b> 나와
+            <b>심문 일지</b>에 적힌다. 무엇을 물을지는 고를 수 없고, 한 번 나온 수법은 다시 나오지 않는다.
+            주술사의 말에는 거짓이 없다. 다만 같은 수법을 두 요괴가 겹쳐 쓰기도 한다.
           </li>
           <li style="--i:3">
             <b>밤</b> <b>검험 기록판</b>에서 사건마다 단서와 힌트를 대조하고, 의심되는 자를 구속해 둔다.
@@ -567,7 +567,7 @@ export class App {
               </li>`,
           )}
         </ul>
-        <button class="btn btn-primary" data-action="howto-done" autofocus>묵안골로 들어간다 ›</button>
+        <button class="btn btn-primary" data-action="howto-done" autofocus>첫 새벽을 맞는다 ›</button>
       </div>
     </main>`;
   }

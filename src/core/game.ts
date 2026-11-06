@@ -9,7 +9,7 @@ import type { Ending, GameState, Mark, Phase, SuspectId } from './types';
  *
  * 1~4일차: dawn → morning(사건 일지 공개) → afternoon(심문) → night(구속) → 다음 날 dawn
  * 5일차:   dawn(사건 없음) → afternoon(오전 심문) → final(처형) → 엔딩
- * 질문 포인트는 CONFIG.questionsByDay (1~4일차 2개, 5일차 3개).
+ * 질문 포인트는 CONFIG.questionsByDay (매일 2개).
  */
 
 export class RuleError extends Error {}

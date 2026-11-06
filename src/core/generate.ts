@@ -45,7 +45,7 @@ export class GenerationError extends Error {}
  * 시드로 한 판을 만든다 (개발문서 5-1).
  * 같은 시드 → 같은 판. 30개 힌트를 모두 알면 해가 하나여야 한다.
  * (요괴끼리는 최소 3종 이상 값이 달라 항상 성립하지만, 데이터가 바뀔 때를 대비해 검사한다.)
- * 어떤 요괴를 물을지는 플레이어가 정하므로, 11개 힌트로 반드시 풀린다는 보장은 하지 않는다.
+ * 어떤 요괴를 물을지는 플레이어가 정하므로, 10개 힌트로 반드시 풀린다는 보장은 하지 않는다.
  */
 export function generateBoard(seed: string): Board {
   const rng = createRng(seed);
