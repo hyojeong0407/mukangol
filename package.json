@@ -1,7 +1,7 @@
 {
   "name": "mukangol",
   "private": true,
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "묵안골 — 병자호란 이후 조선 배경 웹 추리 공포 게임",
   "type": "module",
   "scripts": {

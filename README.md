@@ -68,6 +68,10 @@ npm run dev        # http://localhost:5173 개발 서버 (정답 DEBUG 패널 �
 
 ## 배포
 
-- **Netlify / Vercel**: 저장소를 연결하면 `netlify.toml` / `vercel.json` 설정대로 `main` 병합 시 자동 배포, PR마다 미리보기.
+- **GitHub Pages (기본)**: `main`에 푸시하면 `.github/workflows/deploy.yml`이 단위 테스트 → 빌드 후 `https://hyojeong0407.github.io/mukangol/` 에 올린다.
+  - 처음 한 번만: 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 바꾼다 (저장소 관리자만 가능).
+  - 진행 상황과 실패 원인은 저장소의 **Actions** 탭에서 본다. 다시 배포하려면 Actions → Deploy to GitHub Pages → Run workflow.
+  - 빌드가 상대 경로(`base: './'`)라 저장소 이름이 바뀌어도 설정을 고칠 필요가 없다.
+- **Netlify / Vercel** (선택): 저장소를 연결하면 `netlify.toml` / `vercel.json` 설정대로 배포된다. GitHub Pages만 쓸 거면 두 파일은 지워도 된다.
 - **itch.io**: `v0.1.0` 같은 태그를 푸시하면 CI가 zip을 만든다 (Actions → itch-zip 아티팩트). 또는 로컬에서 `npm run build && npm run zip:itch`.
   itch.io에서 "HTML" 프로젝트로 올리고 화면 크기는 1280×720 이상을 권장.

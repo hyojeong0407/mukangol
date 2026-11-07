@@ -1,5 +1,9 @@
 # 변경 기록
 
+## v0.4.4 — 2026-11-07
+
+- GitHub Pages 배포 추가 (`.github/workflows/deploy.yml`): `main`에 푸시하면 단위 테스트 → 빌드 → `https://hyojeong0407.github.io/mukangol/` 자동 배포
+
 ## v0.4.3 — 2026-11-07
 
 - 워터마크(✦)를 지운 동업자 그림 적용: 장면 배경 14종, 요괴 본모습 5종, 소환진 5종
