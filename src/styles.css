@@ -1872,3 +1872,69 @@ input {
     padding-left: 1rem;
   }
 }
+
+/* ---------- 판독 불가 · 옥사 이변 · 옥사 칸 (v0.5) ---------- */
+.hud-day {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.hud-tally {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.hud-tally b {
+  color: var(--hanji);
+}
+@media (max-width: 720px) {
+  .hud-tally {
+    flex-basis: 100%;
+  }
+}
+/* 판독 불가: 번진 먹 */
+.clue-illegible h4 strong,
+.chip-illegible strong,
+.td-illegible {
+  color: var(--muted);
+  border-bottom-color: transparent;
+  filter: blur(0.3px);
+  letter-spacing: 0.05em;
+}
+.clue-illegible p {
+  font-style: italic;
+  color: var(--muted);
+}
+.clue.clue-illegible {
+  background: repeating-linear-gradient(-45deg, transparent 0 6px, rgba(120, 20, 20, 0.06) 6px 12px);
+}
+/* 옥사 이변: 희생자 대신 옥사 */
+.clue-prison h4 strong,
+.chip-prison strong,
+.td-prison {
+  color: var(--indigo);
+}
+.book.is-prevented .book-head,
+.cs-book.is-prevented .book-head {
+  color: var(--indigo);
+}
+.book.is-prevented .victim {
+  font-weight: 700;
+}
+.case-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+.tag-prevented {
+  margin-left: 0.4rem;
+  color: var(--indigo);
+}
+.ending-tally {
+  font-size: 1.05rem;
+}
+.prison {
+  margin-top: 1.5rem;
+}
+.prison .sub-h small {
+  font-weight: 400;
+  color: var(--muted);
+}

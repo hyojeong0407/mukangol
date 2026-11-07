@@ -146,7 +146,8 @@ export class App {
         await this.play(S.journalSteps(s));
         return;
       case 'afternoon':
-        this.ui.reportPending = true;
+        // 옥이 비어 있으면 물을 사람이 없으므로 보고도 없다
+        this.ui.reportPending = s.detained.length > 0;
         this.render();
         await this.play(S.prisonIntroSteps(s));
         return;
@@ -155,7 +156,8 @@ export class App {
         await this.play(S.nightSteps(s));
         return;
       case 'final':
-        this.ui.executionPick = s.detained.slice(0, CONFIG.executionCount);
+        // 구속은 이제 심문·사건 저지용이라(민간인을 가둘 때도 많다) 처형 후보로 미리 고르지 않는다
+        this.ui.executionPick = [];
         this.render();
         await this.play(S.finalIntroSteps());
         return;
@@ -542,20 +544,23 @@ export class App {
         <ul class="howto">
           <li style="--i:0"><b>새벽</b> 의식이 열려 피해자가 생긴다. 포졸이 달려와 사건을 알린다.</li>
           <li style="--i:1">
-            <b>오전</b> 포졸이 <b>사건 일지</b>를 읽어 준다. 6종 단서는 그 사건을 일으킨 요괴의 수법이다.
+            <b>오전</b> 포졸이 <b>사건 일지</b>를 읽어 준다. 단서는 그 사건을 일으킨 요괴의 수법이지만, 여섯
+            중 둘은 핏물에 번져 <b>판독할 수 없다</b>. 그리고 오후에 심문할 사람을 <b>옥에 가둔다</b>.
           </li>
           <li style="--i:2">
-            <b>오후</b> 포졸을 옥사로 보내 주술사를 심문한다. 하루 두 번, 다섯 요괴 중 <b>하나를 고르면</b> 그
-            요괴의 수법 여섯 가지(훼손·유인·재물·언어·장소·진) 중 하나가 <b>무작위로</b> 나와
-            <b>심문 일지</b>에 적힌다. 무엇을 물을지는 고를 수 없고, 한 번 나온 수법은 다시 나오지 않는다.
-            주술사의 말에는 거짓이 없다. 다만 같은 수법을 두 요괴가 겹쳐 쓰기도 한다.
+            <b>옥사는 두 칸</b>. 주술사는 <b>옥에 갇힌 자</b>에 대해서만 입을 연다. 하루 두 번, 갇힌 자를
+            고르면 그 요괴의 수법 여섯 가지(훼손·유인·재물·언어·장소·진) 중 하나가 <b>무작위로</b> 나와
+            <b>심문 일지</b>에 적힌다. 주술사의 말에는 거짓이 없다. 다만 같은 수법을 두 요괴가 겹쳐 쓰기도
+            한다.
           </li>
           <li style="--i:3">
-            <b>밤</b> <b>검험 기록판</b>에서 사건마다 단서와 힌트를 대조하고, 의심되는 자를 구속해 둔다.
+            <b>밤</b> <b>검험 기록판</b>에서 단서와 힌트를 대조하고, 오늘 밤 가둘 자를 정한다.
+            <b>갇힌 요괴는 그날 밤 사건을 일으키지 못한다.</b> 막아 내면 희생자 대신 <b>옥사 이변</b>이
+            기록되고, 범인은 갇혀 있던 둘 중 하나다. 희생자가 넷이 되면 이겨도 씁쓸한 끝을 맞는다.
           </li>
           <li style="--i:4">
             <b>5일차</b> 넷을 처형한다. 다섯 아낙은 저마다 요괴의 이름을 달고 있지만, 그중 하나는 사람이다. 한
-            번도 사건을 일으키지 않은 자가 사람이다.
+            번도 사건(옥사 이변 포함)을 일으키지 않은 자가 사람이다.
           </li>
         </ul>
         <ul class="yokai-map">
@@ -591,13 +596,17 @@ export class App {
 
   private endingScreen(): Raw {
     const s = this.state!;
-    const kind = s.ending ?? 'game_over';
+    const kind = G.endingKind(s) ?? 'game_over';
     const e = TEXTS.endings[kind];
+    const prevented = new Set(s.incidentLog.filter((x) => x.prevented).map((x) => x.day));
     const civ = suspect(s.board.civilianId);
     return html`<main class="ending ending-${kind}">
       <div class="paper ending-paper">
-        <h1 class="brush">${kind === 'happy' ? '해피 엔딩' : '게임 오버'}</h1>
+        <h1 class="brush">${{ happy: '해피 엔딩', bitter: '씁쓸한 엔딩', game_over: '게임 오버' }[kind]}</h1>
         <h2>${e.title}</h2>
+        <p class="ending-tally">
+          희생자 <b>${G.victimCount(s)}명</b> · 구속으로 막아 낸 사건 <b>${G.preventedCount(s)}건</b>
+        </p>
         ${e.body.map((p) => html`<p>${p}</p>`)}
         <div class="reveal">
           <h3>진상</h3>
@@ -612,12 +621,16 @@ export class App {
                 </figcaption>
               </figure>`;
             })}
-          </div><br>
+          </div>
+          <br />
           <p>사람이었던 이: <b>${civ.name}</b> (${civ.disguise})</p>
           <ol>
             ${s.board.eventOrder.map(
               (id, i) =>
-                html`<li>${i + 1}일차 — ${suspect(id).yokai} <small>(${suspect(id).name})</small></li>`,
+                html`<li>
+                  ${i + 1}일차 — ${suspect(id).yokai} <small>(${suspect(id).name})</small>
+                  ${prevented.has(i + 1) ? html`<small class="tag-prevented">옥에 갇혀 막힘</small>` : ''}
+                </li>`,
             )}
           </ol>
           <p class="dim">판 번호 ${s.seed}</p>

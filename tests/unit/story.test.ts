@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fill, josa } from '../../src/core/josa';
-import { advance, ask, askableSuspects, newGame } from '../../src/core/game';
+import { advance, ask, askableSuspects, newGame, toggleDetain } from '../../src/core/game';
 import { CONFIG } from '../../src/config';
 import { SUSPECTS } from '../../src/core/data';
 import * as S from '../../src/ui/story';
@@ -30,12 +30,35 @@ describe('연출 대본', () => {
     expect(steps.some((x) => 'text' in x && x.text.includes(inc.victim))).toBe(true);
     expect(steps.some((x) => x.t === 'line' && x.who === S.patrolOf(1))).toBe(true);
   });
-  it('오전: 사건 일지 6항목을 차례로 읽는다', () => {
+  it('오전: 사건 일지 6항목을 차례로 읽는다 (판독 불가 항목 포함)', () => {
     const s = advance(s0, 0);
-    expect(S.journalSteps(s).filter((x) => x.t === 'journal')).toHaveLength(6);
+    const items = S.journalSteps(s).filter((x) => x.t === 'journal');
+    expect(items).toHaveLength(6);
+    const illegible = CONFIG.legibleClues < 6 ? items.filter((x) => x.text.includes('알아볼 수가 없')) : [];
+    expect(illegible).toHaveLength(6 - CONFIG.legibleClues);
+  });
+  it('옥사 이변: 지난밤 범인이 갇혀 있었으면 새벽에 피해자 대신 옥사 이변을 알린다', () => {
+    let s = advance(advance(advance(s0, 0), 0), 0); // 1일차 밤 (옥은 비어 있음)
+    const culprit = s.board.eventOrder[1];
+    s = toggleDetain(s, culprit, 0);
+    s = advance(s, 0); // 2일차 새벽
+    const dawn = S.dawnSteps(s);
+    expect(dawn.some((x) => 'text' in x && x.text.includes(s.board.incidents[1].victim))).toBe(false);
+    expect(dawn.some((x) => 'text' in x && x.text.includes('옥사'))).toBe(true);
+    s = advance(s, 0); // 오전
+    const steps = S.journalSteps(s);
+    expect(steps.some((x) => x.t === 'journal' && x.text.includes('옥사'))).toBe(true);
+    expect(S.namesOf(['beomgol', 'mul'])).toBe('범골댁과 물댁');
+  });
+  it('오후: 옥이 비면 심문 없이 넘어가는 장면', () => {
+    const s = advance(advance(s0, 0), 0);
+    expect(S.prisonIntroSteps(s).some((x) => 'text' in x && x.text.includes('비어'))).toBe(true);
   });
   it('오후: 심문 보고는 요괴 이름으로 말한다', () => {
-    let s = advance(advance(s0, 0), 0);
+    let s = advance(s0, 0);
+    s = toggleDetain(toggleDetain(s, 'beomgol', 0), 'mul', 0);
+    s = advance(s, 0);
+    expect(S.prisonIntroSteps(s).some((x) => 'text' in x && x.text.includes('범골댁과 물댁'))).toBe(true);
     while (s.questionPoints > 0) s = ask(s, askableSuspects(s)[0], 0);
     const steps = S.reportSteps(s);
     const hintSteps = steps.filter((x) => x.t === 'hints');

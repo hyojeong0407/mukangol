@@ -41,6 +41,19 @@ describe('저장', () => {
       expect(r.status).toBe('incompatible');
     }
   });
+  it('v3 저장은 모든 단서를 읽을 수 있는 판으로 이어 가고, 옥사 칸 수에 맞춰 구속을 줄인다', () => {
+    const s = newGame('MIG3', 0);
+    const old = JSON.parse(JSON.stringify(s));
+    old.version = 3;
+    for (const inc of old.board.incidents) delete inc.legible;
+    old.detained = ['beomgol', 'soedol', 'mukjip', 'mul'];
+    const r = migrate(old);
+    expect(r.status).toBe('ok');
+    if (r.status !== 'ok') return;
+    expect(r.state.version).toBe(4);
+    expect(r.state.detained).toEqual(['beomgol', 'soedol']);
+    for (const inc of r.state.board.incidents) expect(inc.legible).toHaveLength(6);
+  });
   it('저장소가 없어도 동작', () => {
     const store = createSaveStore(null);
     expect(store.available).toBe(false);

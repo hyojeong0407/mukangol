@@ -27,7 +27,11 @@ async function settle(page: Page) {
 async function answer(page: Page) {
   return page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem('mukangol.save.v1')!);
-    return { civilian: s.board.civilianId as string, all: Object.keys(s.board.profiles) as string[] };
+    return {
+      civilian: s.board.civilianId as string,
+      all: Object.keys(s.board.profiles) as string[],
+      eventOrder: s.board.eventOrder as string[],
+    };
   });
 }
 
@@ -39,7 +43,15 @@ async function start(page: Page) {
   await settle(page); // 1일차 새벽 → 사건 일지
 }
 
-/** 질문 포인트를 다 쓸 때까지 요괴를 골라 묻는다 (매일 2개) */
+/** 옥사를 비우고 ids를 가둔다 (오전·밤) */
+async function jail(page: Page, ids: string[]) {
+  const release = page.locator('.suspect-card.is-detained [data-action="detain"]');
+  while ((await release.count()) > 0) await release.first().click();
+  for (const id of ids) await page.locator(`[data-action="detain"][data-id="${id}"]`).click();
+  await expect(page.locator('.suspect-card.is-detained')).toHaveCount(ids.length);
+}
+
+/** 질문 포인트를 다 쓸 때까지 갇힌 자를 골라 묻는다 (매일 2개) */
 async function interrogate(page: Page) {
   const btn = page.locator('[data-action="ask"]:not([disabled])');
   for (let i = 0; i < 10 && (await btn.count()) > 0; i++) {
@@ -49,11 +61,21 @@ async function interrogate(page: Page) {
   await expect(page.locator('.hint-group li')).not.toHaveCount(0); // 보고 후 심문 일지
 }
 
-async function playToFinal(page: Page) {
+/**
+ * 5일차 처형장까지. 오전에는 civilian+다른 한 명을 가두고 묻는다.
+ * 밤에는 blockNight(day)가 돌려준 사람을 가둔다 (다음 날 범인을 가두면 옥사 이변).
+ */
+async function playToFinal(
+  page: Page,
+  blockNight: (day: number, a: Awaited<ReturnType<typeof answer>>) => string[],
+) {
   await start(page);
+  const a = await answer(page);
+  const others = a.all.filter((x) => x !== a.civilian);
   for (let day = 1; day <= 5; day++) {
     if (day < 5) {
       await expect(page.locator('.book')).toBeVisible();
+      await jail(page, [a.civilian, others[day % others.length]]); // 오전: 오후에 물을 사람
       await page.locator('[data-action="advance"]').click(); // 오전 → 오후
       await settle(page);
     }
@@ -62,12 +84,19 @@ async function playToFinal(page: Page) {
     await settle(page);
     if (day < 5) {
       await expect(page.locator('.suspect-card')).toHaveCount(5);
+      await jail(page, blockNight(day, a)); // 밤: 오늘 밤 가둘 사람
       await page.locator('[data-action="advance"]').click(); // 밤 → 다음 새벽 → 사건 일지
       await settle(page);
     }
   }
   await expect(page.getByRole('heading', { name: /5일차 처형/ })).toBeVisible();
 }
+
+/** 다음 날 범인과 민간인을 가둔다 → 사건이 모두 막힌다 (희생자 1) */
+const blockAll = (day: number, a: Awaited<ReturnType<typeof answer>>) =>
+  day < 4 ? [a.eventOrder[day], a.civilian] : [a.civilian, a.eventOrder[0]];
+/** 민간인과 1일차 범인만 가둔다 → 아무것도 막지 못한다 (희생자 4) */
+const blockNone = (_: number, a: Awaited<ReturnType<typeof answer>>) => [a.civilian, a.eventOrder[0]];
 
 async function pick(page: Page, ids: string[]) {
   for (const id of ids) await page.locator(`[data-action="pick"][data-id="${id}"]`).click();
@@ -86,22 +115,40 @@ function listenBgm(page: Page) {
   return heard;
 }
 
-test('해피 엔딩 경로', async ({ page }) => {
+test('해피 엔딩 경로 (사건을 막아 옥사 이변이 기록된다)', async ({ page }) => {
   const heard = listenBgm(page);
-  await playToFinal(page);
+  await playToFinal(page, blockAll);
+  await page.locator('[data-action="view"][data-view="caselog"]').click();
+  await page.locator('[data-action="caseday"][data-day="2"]').click();
+  await expect(page.locator('.book.is-prevented')).toBeVisible();
+  await expect(page.locator('.book-head')).toContainText('옥사 이변');
+  await expect(page.locator('.hud-tally')).toContainText('희생 1');
+  await page.locator('[data-action="view"][data-view="today"]').click();
   const a = await answer(page);
   await pick(
     page,
     a.all.filter((x) => x !== a.civilian),
   );
   await expect(page.getByRole('heading', { name: '해피 엔딩' })).toBeVisible();
+  await expect(page.locator('.ending-tally')).toContainText('희생자 1명');
   await expect.poll(() => heard.at(-1)).toBe('bgm-ending-happy'); // 처형 곡 다음 해피 엔딩 곡
   expect(heard).toContain('bgm-ending');
 });
 
+test('희생자가 넷이면 요괴를 다 가려내도 씁쓸한 엔딩', async ({ page }) => {
+  await playToFinal(page, blockNone);
+  const a = await answer(page);
+  await pick(
+    page,
+    a.all.filter((x) => x !== a.civilian),
+  );
+  await expect(page.getByRole('heading', { name: '씁쓸한 엔딩' })).toBeVisible();
+  await expect(page.locator('.ending-tally')).toContainText('희생자 4명');
+});
+
 test('게임 오버 경로', async ({ page }) => {
   const heard = listenBgm(page);
-  await playToFinal(page);
+  await playToFinal(page, blockAll);
   const a = await answer(page);
   await pick(page, [a.civilian, ...a.all.filter((x) => x !== a.civilian).slice(0, 3)]);
   await expect(page.getByRole('heading', { name: '게임 오버' })).toBeVisible();
@@ -123,17 +170,44 @@ test('이어하기와 기록판 사건별 표시', async ({ page }) => {
   await expect(page.locator('[data-action="mark"]').first().locator('.stamp')).toHaveText('가능');
 });
 
-test('심문 일지는 요괴 이름으로, 구속하면 항변한다', async ({ page }) => {
+test('오전에 가두면 항변하고, 갇힌 자만 심문하며, 심문 일지는 요괴 이름으로', async ({ page }) => {
   await start(page);
+  await page.locator('[data-action="detain"][data-id="mul"]').click();
+  await expect(page.locator('.speech-bubble')).toBeVisible();
+  await page.locator('[data-action="detain"][data-id="beomgol"]').click();
+  await expect(page.locator('[data-action="detain"][data-id="soedol"]')).toBeVisible();
   await page.locator('[data-action="advance"]').click();
   await settle(page);
+  // 질문 버튼은 갇힌 둘뿐
+  await expect(page.locator('[data-action="ask"]')).toHaveCount(2);
   await interrogate(page);
   const titles = await page.locator('.hint-group h3').allInnerTexts();
   expect(titles.join(' ')).toMatch(/호랑이|두억시니|도깨비|처녀귀신|구미호/);
+});
+
+test('옥이 비어 있으면 심문 없이 밤으로 넘어간다', async ({ page }) => {
+  await start(page);
   await page.locator('[data-action="advance"]').click();
   await settle(page);
-  await page.locator('[data-action="detain"]').first().click();
-  await expect(page.locator('.speech-bubble')).toBeVisible();
+  await expect(page.locator('.speech')).toContainText('옥이 비어');
+  await expect(page.locator('[data-action="ask"]')).toHaveCount(0);
+  await page.locator('[data-action="advance"]').click();
+  await settle(page);
+  await expect(page.locator('.prison')).toBeVisible();
+});
+
+test('대사 자동 넘김을 껐다 켜도 컷신이 멈추지 않는다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '새 게임' }).click();
+  const text = page.locator('.cs-text');
+  await expect(text).not.toBeEmpty();
+  await page.locator('[data-cs="auto"]').click(); // 끄기
+  await expect(page.locator('[data-cs="auto"]')).toHaveText('수동 ⏸');
+  const before = await text.innerText();
+  await page.waitForTimeout(2500);
+  expect(await text.innerText()).toBe(before); // 수동: 그대로
+  await page.locator('[data-cs="auto"]').click(); // 다시 켜기
+  await expect(text).not.toHaveText(before, { timeout: 5000 }); // 저절로 다음 대사
 });
 
 test('연출 레이어와 컷신이 오류 없이 뜬다', async ({ page }) => {

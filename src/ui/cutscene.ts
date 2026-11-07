@@ -1,5 +1,5 @@
 import { sound, type Sfx } from '../audio/sound';
-import { CAST, CATEGORIES, SUSPECTS, category, clueValue, suspect } from '../core/data';
+import { CAST, CATEGORIES, SUSPECTS, TEXTS, category, clueValue, suspect } from '../core/data';
 import type { Hint, Incident } from '../core/types';
 import type { Mood } from '../scenes/fx';
 import { bgSrc, suspectPortrait } from './assets';
@@ -67,6 +67,9 @@ export class CutscenePlayer {
   private skipAll = false;
   private typing: { finish: () => void } | null = null;
   private bgKey = '';
+  /** 지금 대사의 자동 넘김 예약. 자동을 다시 켜면 이걸로 예약을 새로 건다 */
+  private armAuto: ((afterToggle: boolean) => void) | null = null;
+  private autoTimer = 0;
 
   constructor(
     private host: HTMLElement,
@@ -80,9 +83,7 @@ export class CutscenePlayer {
         return;
       }
       if (ctl?.dataset.cs === 'auto') {
-        this.env.setAutoAdvance(!this.env.autoAdvance());
-        ctl.setAttribute('aria-pressed', String(this.env.autoAdvance()));
-        ctl.textContent = this.env.autoAdvance() ? '자동 ▶' : '수동 ⏸';
+        this.toggleAuto(ctl);
         return;
       }
       this.advance();
@@ -102,6 +103,20 @@ export class CutscenePlayer {
       this.advance();
     }
     return true;
+  }
+
+  /**
+   * 자동/수동 전환. 끄면 걸려 있던 자동 넘김을 취소하고,
+   * 다시 켜면 (이미 다 찍힌 대사라도) 넘김 예약을 새로 건다.
+   * 예전에는 대사가 다 찍힌 순간에만 예약을 걸어서, 껐다 켜면 컷신이 멈춰 있었다.
+   */
+  private toggleAuto(btn: HTMLElement) {
+    const on = !this.env.autoAdvance();
+    this.env.setAutoAdvance(on);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.textContent = on ? '자동 ▶' : '수동 ⏸';
+    window.clearTimeout(this.autoTimer);
+    if (on) this.armAuto?.(true);
   }
 
   skip() {
@@ -136,6 +151,8 @@ export class CutscenePlayer {
       this.active = false;
       this.typing = null;
       this.resolveStep = null;
+      this.armAuto = null;
+      window.clearTimeout(this.autoTimer);
       this.host.classList.add('cs-closing');
       await new Promise((r) => setTimeout(r, this.env.reduceMotion() ? 0 : 250));
       this.host.classList.remove('cs-closing');
@@ -312,16 +329,27 @@ export class CutscenePlayer {
       };
       this.resolveStep = done;
       if (this.skipAll) return done();
+      let ready = false;
+      // 자동 넘김 예약: 다 찍힌 뒤 읽을 시간을 주고 넘긴다.
+      // 자동을 방금 다시 켠 경우엔 이미 읽고 있었으므로 짧게 기다린다.
+      const arm = (afterToggle: boolean) => {
+        if (!ready || settled || !this.env.autoAdvance()) return;
+        window.clearTimeout(this.autoTimer);
+        this.autoTimer = window.setTimeout(
+          () => {
+            if (this.resolveStep === done && this.env.autoAdvance()) done();
+          },
+          afterToggle ? Math.min(1200, readMs(text)) : readMs(text),
+        );
+      };
+      this.armAuto = arm;
       Promise.all([typed, minRead]).then(() => {
         box.classList.add('done');
-        if (!this.env.autoAdvance() || settled) return;
-        // 다 찍힌 뒤 읽을 시간을 준다
-        const wait = readMs(text);
-        window.setTimeout(() => {
-          if (this.resolveStep === done && this.env.autoAdvance()) done();
-        }, wait);
+        ready = true;
+        arm(false);
       });
     });
+    window.clearTimeout(this.autoTimer);
   }
 
   private typewriter(el: HTMLElement, text: string, animate: boolean): Promise<void> {
@@ -352,17 +380,35 @@ export class CutscenePlayer {
 
 function journalHtml(inc: Incident, upTo: number): Raw {
   const items = CATEGORIES.map((c, i) => {
-    const v = clueValue(c.id, inc.clues[c.id]);
     const state = i < upTo - 1 ? 'is-shown' : i === upTo - 1 ? 'is-shown is-new' : 'is-hidden';
+    if (i >= upTo)
+      return html`<li class="clue ${state}">
+        <h4><span class="num">${NUM[i]}</span> ${c.name}: <strong>……</strong></h4>
+      </li>`;
+    const raw0 = inc.clues[c.id];
+    if (raw0 === undefined) {
+      const prisonPlace = inc.prevented && c.id === 'place';
+      return html`<li class="clue ${state} ${prisonPlace ? 'clue-prison' : 'clue-illegible'}">
+        <h4>
+          <span class="num">${NUM[i]}</span> ${c.name}: <strong>${prisonPlace ? '옥사' : '판독 불가'}</strong>
+        </h4>
+        <p>${prisonPlace ? '그날 밤 옥에 갇혀 있던 자 가운데 하나의 짓이다.' : TEXTS.illegible}</p>
+      </li>`;
+    }
+    const v = clueValue(c.id, raw0);
     return html`<li class="clue ${state}">
-      <h4><span class="num">${NUM[i]}</span> ${c.name}: <strong>${i < upTo ? v.name : '……'}</strong></h4>
-      ${i < upTo ? html`<p>${v.journal}</p>` : ''}
-      ${c.id === 'circle' && i < upTo ? html`<div class="circle-art">${raw(circleSvg(v.id))}</div>` : ''}
+      <h4><span class="num">${NUM[i]}</span> ${c.name}: <strong>${v.name}</strong></h4>
+      <p>${v.journal}</p>
+      ${c.id === 'circle' ? html`<div class="circle-art">${raw(circleSvg(v.id))}</div>` : ''}
     </li>`;
   });
-  return html`<article class="book cs-book">
+  return html`<article class="book cs-book ${inc.prevented ? 'is-prevented' : ''}">
     <header class="book-head">
-      <span>${inc.day}일차 검안</span> <span class="victim">피해자: ${inc.victim}</span>
+      ${
+        inc.prevented
+          ? html`<span>${inc.day}일차 옥사 이변</span> <span class="victim">피해자 없음</span>`
+          : html`<span>${inc.day}일차 검안</span> <span class="victim">피해자: ${inc.victim}</span>`
+      }
     </header>
     <div class="book-pages">
       <ol class="page">

@@ -1,4 +1,5 @@
 import { CONFIG, STORAGE_KEYS } from '../config';
+import { CATEGORY_IDS } from '../core/data';
 import type { GameState } from '../core/types';
 
 /** localStorage 래퍼. 사생활 모드 등에서 접근이 막혀도 게임은 계속 돈다. */
@@ -32,6 +33,16 @@ const MIGRATIONS: Record<number, Migration> = {
   },
   // v2 → v3: 없음. 심문이 "정해진 질문"에서 "요괴를 골라 묻기"로 바뀌고 판 구조(askOrder, 값 겹침)가 달라져
   // 예전 판을 이어 갈 수 없다. 이어하기에서 안내하고 새 게임을 시작한다.
+
+  // v3 → v4: 사건 일지 일부 판독 불가, 옥사 2칸(갇힌 자만 심문, 갇힌 요괴는 사건을 못 일으킴).
+  // 진행 중인 판은 이미 본 일지와 어긋나지 않도록 모든 단서를 읽을 수 있는 것으로 두고,
+  // 옥사 칸 수에 맞춰 먼저 가둔 두 명만 남긴다.
+  3: (raw) => {
+    const board = raw.board as { incidents?: Record<string, unknown>[] } | undefined;
+    const incidents = (board?.incidents ?? []).map((inc) => ({ ...inc, legible: [...CATEGORY_IDS] }));
+    const detained = Array.isArray(raw.detained) ? raw.detained.slice(0, CONFIG.maxDetained) : [];
+    return { ...raw, board: { ...board, incidents }, detained, version: 4 };
+  },
 };
 
 export type LoadResult =

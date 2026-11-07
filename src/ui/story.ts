@@ -1,7 +1,9 @@
 import { CONFIG } from '../config';
 import { CATEGORIES, TEXTS, clueValue, suspect } from '../core/data';
-import { fill } from '../core/josa';
-import type { GameState, Hint } from '../core/types';
+import { endingKind } from '../core/game';
+import { incidentRecord } from '../core/generate';
+import { fill, josa } from '../core/josa';
+import type { GameState, Hint, Incident } from '../core/types';
 import scripts from '../data/scripts.json';
 import type { Step } from './cutscene';
 
@@ -36,6 +38,28 @@ function fromRaw(list: RawStep[], vars: Record<string, string | number> = {}): S
   });
 }
 
+/** 갇힌 사람 이름을 잇는다: "범골댁과 물댁" */
+export function namesOf(ids: readonly string[]): string {
+  const names = ids.map((id) => suspect(id).name);
+  return names.map((n, i) => (i < names.length - 1 ? `${n}${josa(n, '과/와')}` : n)).join(' ');
+}
+
+/** 사건 일지 항목 하나를 읽는 문장 (판독 불가, 옥사 이변의 장소 포함) */
+export function clueLine(inc: Incident, i: number): string {
+  const c = CATEGORIES[i];
+  const raw = inc.clues[c.id];
+  if (inc.prevented && c.id === 'place')
+    return fill(scripts.journal.item, {
+      num: i + 1,
+      cat: c.name,
+      value: '옥사',
+      journal: '그날 밤 옥에 갇혀 있던 자 가운데 하나의 짓이다.',
+    });
+  if (raw === undefined) return fill(scripts.journal.illegible, { num: i + 1, cat: c.name });
+  const v = clueValue(c.id, raw);
+  return fill(scripts.journal.item, { num: i + 1, cat: c.name, value: v.name, journal: v.journal });
+}
+
 export const prologueSteps = (): Step[] => fromRaw(scripts.prologue as RawStep[]);
 export const openingSteps = (): Step[] => fromRaw(scripts.opening as RawStep[]);
 
@@ -44,6 +68,29 @@ export function dawnSteps(s: GameState): Step[] {
   if (s.day === CONFIG.totalDays) return fromRaw(scripts.day5Dawn as RawStep[]);
   const inc = s.board.incidents[s.day - 1];
   const pojol = patrolOf(s.day);
+  // 지난밤의 범인이 옥에 갇혀 있었으면 사건 대신 옥사 이변
+  if (incidentRecord(s.board, s.day, s.detained).prevented) {
+    const p = scripts.dawn.prevented;
+    return [
+      {
+        t: 'title',
+        text: `${s.day}일차 새벽`,
+        sub: scripts.dawn.titleSub[s.day - 1],
+        mood: 'dawn',
+        bg: 'dawn',
+        sfx: 'rooster',
+      },
+      { t: 'narr', text: p.narr, bg: 'prison' },
+      {
+        t: 'line',
+        who: pojol,
+        text: fill(p.shout, { detained: namesOf(s.detained) }),
+        fx: ['shake'],
+        sfx: 'heartbeat',
+      },
+      { t: 'line', who: 'protagonist', text: p.reply },
+    ];
+  }
   const place = clueValue('place', inc.clues.place).name;
   const i = s.day - 1;
   const placeDawn = (TEXTS.placeDawn as Record<string, string>)[inc.clues.place];
@@ -78,30 +125,39 @@ export function journalSteps(s: GameState): Step[] {
     {
       t: 'line',
       who: pojol,
-      text: (scripts.journal.intro as Record<string, string>)[pojol],
+      text: inc.prevented
+        ? scripts.journal.preventedIntro
+        : (scripts.journal.intro as Record<string, string>)[pojol],
       sfx: 'paper',
       mood: 'day',
     },
   ];
-  CATEGORIES.forEach((c, i) => {
-    const v = clueValue(c.id, inc.clues[c.id]);
+  CATEGORIES.forEach((_, i) => {
     steps.push({
       t: 'journal',
       incident: inc,
       upTo: i + 1,
       reader: pojol,
-      text: fill(scripts.journal.item, { num: i + 1, cat: c.name, value: v.name, journal: v.journal }),
+      text: clueLine(inc, i),
       sfx: 'paper',
     });
   });
-  steps.push({ t: 'line', who: 'protagonist', text: scripts.journal.outro[(s.day - 1) % 4] });
+  steps.push({
+    t: 'line',
+    who: 'protagonist',
+    text: inc.prevented
+      ? fill(scripts.journal.preventedOutro, { detained: namesOf(inc.prevented) })
+      : scripts.journal.outro[(s.day - 1) % 4],
+  });
   return steps;
 }
 
 /** 옥사 도착: 포졸과 대화 → 질문 고르기로 이어진다 */
 export function prisonIntroSteps(s: GameState): Step[] {
+  // 옥이 비어 있으면 심문할 사람이 없다
+  if (!s.detained.length) return fromRaw(scripts.prison.empty as RawStep[], { jailer: jailerOf(s.day) });
   const list = scripts.prison.intro[Math.min(s.day, scripts.prison.intro.length) - 1] as RawStep[];
-  return fromRaw(list, { jailer: jailerOf(s.day) });
+  return fromRaw(list, { jailer: jailerOf(s.day), detained: namesOf(s.detained) });
 }
 
 /** 질문을 고를 때 주인공이 포졸에게 내리는 지시 한 줄 */
@@ -181,8 +237,13 @@ export function executionSteps(s: GameState): Step[] {
       fx: monster ? ['shake'] : ['dark'],
     });
   }
-  steps.push({ t: 'line', who: 'protagonist', text: s.ending === 'happy' ? e.happyLine : e.badLine });
-  const end = TEXTS.endings[s.ending ?? 'game_over'];
+  const kind = endingKind(s) ?? 'game_over';
+  steps.push({
+    t: 'line',
+    who: 'protagonist',
+    text: { happy: e.happyLine, bitter: e.bitterLine, game_over: e.badLine }[kind],
+  });
+  const end = TEXTS.endings[kind];
   steps.push({
     t: 'title',
     text: end.title,

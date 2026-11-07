@@ -1,11 +1,20 @@
 import { CONFIG, TOTAL_QUESTIONS } from '../config';
 import { CATEGORIES, CATEGORY_IDS, SUSPECTS, TEXTS, category, clueValue, suspect } from '../core/data';
-import { askableSuspects, canAdvance, canDetainNow, markKey, remainingFor } from '../core/game';
+import {
+  askableSuspects,
+  canAdvance,
+  canDetainNow,
+  markKey,
+  preventedCount,
+  remainingFor,
+  victimCount,
+} from '../core/game';
+import type { CategoryId } from '../core/data';
 import type { GameState, Hint, Incident, Mark } from '../core/types';
 import { suspectPortrait } from './assets';
 import { circleSvg } from './circles';
 import { html, raw, type Raw } from './html';
-import { jailerOf } from './story';
+import { jailerOf, namesOf } from './story';
 
 export type View = 'today' | 'caselog' | 'interrogation' | 'board' | 'suspects';
 
@@ -37,6 +46,28 @@ export const phaseLabel = (s: GameState) =>
 
 const castPortrait = (src: string, alt: string, cls = 'portrait') =>
   html`<img class="${cls}" src="${src}" alt="${alt}" loading="lazy" width="360" height="450" />`;
+
+/**
+ * 사건 일지 한 칸의 표시. 판독 불가와 옥사 이변의 장소도 여기서 처리한다.
+ * kind: 'value' 읽을 수 있는 단서 / 'illegible' 판독 불가 / 'prison' 옥사 이변의 장소
+ */
+export function clueCell(inc: Incident, cat: CategoryId) {
+  const v = inc.clues[cat];
+  if (v !== undefined) {
+    const cv = clueValue(cat, v);
+    return { kind: 'value' as const, id: v, name: cv.name, journal: cv.journal };
+  }
+  if (inc.prevented && cat === 'place')
+    return {
+      kind: 'prison' as const,
+      id: '',
+      name: '옥사',
+      journal: `그날 밤 옥에 갇혀 있던 ${namesOf(inc.prevented)} 가운데 하나의 짓이다.`,
+    };
+  return { kind: 'illegible' as const, id: '', name: '판독 불가', journal: TEXTS.illegible };
+}
+
+const victimLabel = (inc: Incident) => (inc.prevented ? '피해자 없음 (옥사 이변)' : `피해자: ${inc.victim}`);
 
 const nameTag = (id: string) => {
   const p = suspect(id);
@@ -70,6 +101,10 @@ export function hud(s: GameState, ui: UiState): Raw {
         )}
       </ol>
       <div class="hud-phase"><strong>${s.day}일차</strong> ${phaseLabel(s)}</div>
+      <div class="hud-tally" title="희생자 / 구속으로 막은 사건">
+        희생 <b>${victimCount(s)}</b> · 막음 <b>${preventedCount(s)}</b> · 옥사
+        <b>${s.detained.length}/${CONFIG.maxDetained}</b>
+      </div>
     </div>
     <nav class="tabs" aria-label="기록">
       ${tab('today', s.phase === 'final' ? '처형장' : '오늘', '1')}
@@ -110,7 +145,7 @@ export function todayView(s: GameState, ui: UiState): Raw {
     case 'dawn':
       return dawnView(s);
     case 'morning':
-      return morningView(s);
+      return morningView(s, ui);
     case 'afternoon':
       return afternoonView(s, ui);
     case 'night':
@@ -128,11 +163,27 @@ function dawnView(s: GameState): Raw {
   </section>`;
 }
 
-function morningView(s: GameState): Raw {
+function morningView(s: GameState, ui: UiState): Raw {
   const inc = s.incidentLog.find((x) => x.day === s.day)!;
   return html`<section class="scene">
-    <p class="report">${TEXTS.patrolReport[(s.day - 1) % TEXTS.patrolReport.length]}</p>
-    ${journal(inc, true)}
+    <p class="report">
+      ${inc.prevented ? TEXTS.preventedReport : TEXTS.patrolReport[(s.day - 1) % TEXTS.patrolReport.length]}
+    </p>
+    ${journal(inc, true)} ${prisonSection(s, ui, '오늘 오후에 심문할 사람을 옥에 가두십시오.')}
+  </section>`;
+}
+
+/** 옥사 칸: 누구를 가둘지 고른다 (오전·밤) */
+function prisonSection(s: GameState, ui: UiState, lead: string): Raw {
+  return html`<section class="prison" aria-labelledby="prison-title">
+    <h3 id="prison-title" class="sub-h">
+      옥사 <small>${s.detained.length} / ${CONFIG.maxDetained}칸</small>
+    </h3>
+    <p class="help">
+      ${lead} 심문은 <b>갇힌 사람에게만</b> 할 수 있고, 갇힌 요괴는 <b>그날 밤 사건을 일으키지 못합니다</b>.
+      구속은 처형이 아닙니다.
+    </p>
+    ${suspectCards(s, ui)}
   </section>`;
 }
 
@@ -147,7 +198,9 @@ function afternoonView(s: GameState, ui: UiState): Raw {
     (_, i) =>
       html`<span class="qp ${i < s.questionPoints ? 'qp-full' : 'qp-empty'}" aria-hidden="true">符</span>`,
   );
-  const done = s.questionPoints === 0 || askableSuspects(s).length === 0;
+  const askable = askableSuspects(s);
+  const done = s.questionPoints === 0 || askable.length === 0;
+  const empty = !s.detained.length;
   return html`<section class="interrogate">
     <figure class="shaman">
       ${castPortrait(`images/characters/char-${jailer}-default.webp`, `${jailerInfo}`)}
@@ -156,11 +209,13 @@ function afternoonView(s: GameState, ui: UiState): Raw {
     <div class="dialogue">
       <div class="speech">
         ${
-          done
-            ? ui.reportPending
-              ? '「다녀오겠습니다, 나리!」'
-              : '「현암 놈이 한 말은 심문 일지에 모두 적었습니다.」'
-            : '「어느 요괴에 대해 캐물어 올까요, 나리?」'
+          empty
+            ? '「옥이 비어 있습니다, 나리. 현암 놈은 제 눈앞에 세운 자에 대해서만 입을 엽니다.」'
+            : done
+              ? ui.reportPending
+                ? '「다녀오겠습니다, 나리!」'
+                : '「현암 놈이 한 말은 심문 일지에 모두 적었습니다.」'
+              : `「갇힌 ${namesOf(s.detained)} 가운데 누구에 대해 캐물어 올까요, 나리?」`
         }
       </div>
       <div class="qp-row" aria-label="남은 질문 ${s.questionPoints}개">질문 ${points}</div>
@@ -168,11 +223,11 @@ function afternoonView(s: GameState, ui: UiState): Raw {
         done
           ? ''
           : html`<p class="help">
-                요괴를 고르면 그 요괴의 수법 여섯 가지 중 아직 듣지 못한 것 하나를 캐물어 옵니다. 어떤 수법이
-                나올지는 정할 수 없습니다.
+                옥에 갇힌 자를 고르면 그 요괴의 수법 여섯 가지 중 아직 듣지 못한 것 하나를 캐물어 옵니다. 어떤
+                수법이 나올지는 정할 수 없습니다.
               </p>
               <ul class="questions">
-                ${SUSPECTS.map((p) => {
+                ${SUSPECTS.filter((p) => s.detained.includes(p.id)).map((p) => {
                   const left = remainingFor(s, p.id);
                   return html`<li>
                     <button
@@ -181,7 +236,7 @@ function afternoonView(s: GameState, ui: UiState): Raw {
                       data-id="${p.id}"
                       ${left > 0 ? '' : raw('disabled')}
                     >
-                      <b>${p.yokai}</b>에 대해 캐물어라
+                      <b>${p.yokai}</b> <small>(${p.name})</small>에 대해 캐물어라
                       <small class="dim">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
                     </button>
                   </li>`;
@@ -201,9 +256,11 @@ function afternoonView(s: GameState, ui: UiState): Raw {
           : ''
       }
       ${
-        done && ui.reportPending
-          ? html`<button class="btn btn-primary" data-action="report">보고를 듣는다</button>`
-          : ''
+        empty
+          ? html`<p class="help">오늘은 심문할 수 없습니다. 밤에 누구를 가둘지 정하십시오.</p>`
+          : done && ui.reportPending
+            ? html`<button class="btn btn-primary" data-action="report">보고를 듣는다</button>`
+            : ''
       }
     </div>
   </section>`;
@@ -212,11 +269,13 @@ function afternoonView(s: GameState, ui: UiState): Raw {
 function nightView(s: GameState, ui: UiState): Raw {
   return html`<section>
     <p class="scene-line">${TEXTS.nightLines[(s.day - 1) % TEXTS.nightLines.length]}</p>
-    <p class="help">
-      의심되는 용의자를 구속해 둘 수 있습니다. 구속은 처형이 아니며 5일차에 고칠 수 있습니다. (동시
-      ${CONFIG.maxDetained}명까지)
-    </p>
-    ${suspectCards(s, ui)}
+    ${prisonSection(
+      s,
+      ui,
+      s.day === CONFIG.totalDays - 1
+        ? '오늘 밤 가둘 사람을 정하십시오. 내일(5일차) 오전 마지막 심문은 이 사람들에게 합니다.'
+        : '오늘 밤 가둘 사람을 정하십시오. 내일 오전에 다시 바꿀 수 있습니다.',
+    )}
   </section>`;
 }
 
@@ -270,17 +329,21 @@ const NUM = ['①', '②', '③', '④', '⑤', '⑥'];
 
 export function journal(inc: Incident, fresh = false): Raw {
   const items = CATEGORIES.map((c, i) => {
-    const v = clueValue(c.id, inc.clues[c.id]);
-    return html`<li class="clue clue-${c.id}">
+    const v = clueCell(inc, c.id);
+    return html`<li class="clue clue-${c.id} ${v.kind === 'value' ? '' : `clue-${v.kind}`}">
       <h4><span class="num">${NUM[i]}</span> ${c.name}: <strong>${v.name}</strong></h4>
       <p>${v.journal}</p>
-      ${c.id === 'circle' ? html`<div class="circle-art">${raw(circleSvg(v.id))}</div>` : ''}
+      ${c.id === 'circle' && v.kind === 'value' ? html`<div class="circle-art">${raw(circleSvg(v.id))}</div>` : ''}
     </li>`;
   });
-  return html`<article class="book ${fresh ? 'fresh' : ''}" aria-label="${inc.day}일차 사건 일지">
+  return html`<article
+    class="book ${fresh ? 'fresh' : ''} ${inc.prevented ? 'is-prevented' : ''}"
+    aria-label="${inc.day}일차 ${inc.prevented ? '옥사 이변' : '사건 일지'}"
+  >
     ${fresh ? html`<span class="new-stamp">새 기록</span>` : ''}
     <header class="book-head">
-      <span>${inc.day}일차 검안</span> <span class="victim">피해자: ${inc.victim}</span>
+      <span>${inc.day}일차 ${inc.prevented ? '옥사 이변' : '검안'}</span>
+      <span class="victim">${victimLabel(inc)}</span>
     </header>
     <div class="book-pages">
       <ol class="page">
@@ -409,17 +472,27 @@ function boardPage(s: GameState, day: number): Raw {
   const pick = s.notes.culprits[day] ?? '';
 
   const caseCard = html`<div class="case-card" aria-label="${day}일차 사건">
-    <div class="case-head"><b>${day}일차 사건</b> <span class="victim">피해자: ${inc.victim}</span></div>
+    <div class="case-head">
+      <b>${day}일차 ${inc.prevented ? '옥사 이변' : '사건'}</b>
+      <span class="victim">${victimLabel(inc)}</span>
+    </div>
     <ul class="case-chips">
-      ${CATEGORIES.map(
-        (c) =>
-          html`<li>
-            <span class="glyph" aria-hidden="true">${c.glyph}</span>
-            <span class="chip-cat">${c.short}</span>
-            <strong>${clueValue(c.id, inc.clues[c.id]).name}</strong>
-          </li>`,
-      )}
+      ${CATEGORIES.map((c) => {
+        const v = clueCell(inc, c.id);
+        return html`<li class="${v.kind === 'value' ? '' : `chip-${v.kind}`}">
+          <span class="glyph" aria-hidden="true">${c.glyph}</span>
+          <span class="chip-cat">${c.short}</span>
+          <strong>${v.kind === 'illegible' ? '?' : v.name}</strong>
+        </li>`;
+      })}
     </ul>
+    ${
+      inc.prevented
+        ? html`<p class="case-note">
+            범인은 그날 밤 갇혀 있던 <b>${namesOf(inc.prevented)}</b> 가운데 하나입니다.
+          </p>`
+        : ''
+    }
   </div>`;
 
   const head = SUSPECTS.map(
@@ -436,7 +509,9 @@ function boardPage(s: GameState, day: number): Raw {
         <th scope="row">
           <span class="glyph" aria-hidden="true">${c.glyph}</span><span class="cat-full">${c.name}</span
           ><span class="cat-short">${c.short}</span>
-          <small class="row-val">${clueValue(c.id, inc.clues[c.id]).name}</small>
+          <small class="row-val"
+            >${clueCell(inc, c.id).kind === 'illegible' ? '?' : clueCell(inc, c.id).name}</small
+          >
         </th>
         ${SUSPECTS.map((p) => {
           const key = markKey(day, p.id, c.id);
@@ -461,8 +536,8 @@ function boardPage(s: GameState, day: number): Raw {
   return html`${caseCard}
     <p class="help">
       위 사건의 단서와 주술사의 힌트(칸 아래 작은 글씨)를 비교해, 이 사건을 일으킬 수 <b>있는</b> 요괴를
-      가려내십시오. 칸을 누르면 <b>가능 → 불가 → 확정 → 지움</b> 순으로 도장이 바뀝니다. 정답은 알려 주지
-      않습니다.
+      가려내십시오. <b>?</b>는 판독할 수 없는 단서라 비교할 수 없습니다. 칸을 누르면
+      <b>가능 → 불가 → 확정 → 지움</b> 순으로 도장이 바뀝니다. 정답은 알려 주지 않습니다.
     </p>
     <div class="table-scroll">
       <table class="board">
@@ -497,14 +572,21 @@ function boardSummary(s: GameState): Raw {
     const pick = s.notes.culprits[d] ?? '';
     return html`<tr>
       <th scope="row">${d}일차</th>
-      ${CATEGORY_IDS.map((c) => html`<td>${inc ? clueValue(c, inc.clues[c]).name : '—'}</td>`)}
+      ${CATEGORY_IDS.map((c) => {
+        if (!inc) return html`<td>—</td>`;
+        const v = clueCell(inc, c);
+        return html`<td class="${v.kind === 'value' ? '' : `td-${v.kind}`}">
+          ${v.kind === 'illegible' ? '?' : v.name}
+        </td>`;
+      })}
       <td>${pick ? html`<b>${suspect(pick).yokai}</b> <small>${suspect(pick).name}</small>` : '미정'}</td>
     </tr>`;
   });
   const picked = new Set(Object.values(s.notes.culprits).filter(Boolean));
   const rest = SUSPECTS.filter((p) => !picked.has(p.id));
   return html`<p class="help">
-      사건마다 고른 범인 추정을 모아 봅니다. 사건을 일으키지 않은 하나가 사람입니다.
+      사건마다 고른 범인 추정을 모아 봅니다. 사건을 일으키지 않은 하나가 사람입니다. 옥사 이변도 그날 밤
+      범인의 짓이므로 사건 하나로 칩니다. <b>?</b>는 판독 불가.
     </p>
     <div class="table-scroll">
       <table class="incidents">
@@ -559,7 +641,7 @@ export function suspectsView(s: GameState, ui: UiState): Raw {
   return html`<section>
     <p class="help">
       다섯 아낙은 저마다 요괴의 이름을 달고 있습니다. 그러나 그중 하나는 요괴가 아닌 사람입니다.
-      ${canDetainNow(s) ? '' : ' 구속과 해제는 밤에 할 수 있습니다.'}
+      ${canDetainNow(s) ? '' : ' 구속과 해제는 오전과 밤에 할 수 있습니다.'}
     </p>
     ${suspectCards(s, ui)}
   </section>`;

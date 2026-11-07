@@ -10,11 +10,30 @@ export interface Hint {
   value: string;
 }
 
+/**
+ * 플레이어가 받는 사건 일지 한 건.
+ * - 보통 사건: 피해자가 있고, 읽을 수 있는 단서만 들어 있다 (판독 불가인 종류는 빠져 있다).
+ * - 옥사 이변: 그날 밤의 범인이 옥에 갇혀 있어 사건이 막힌 경우. 피해자 없음,
+ *   단서는 더 적고, 범인은 그날 밤 갇혀 있던 사람(prevented) 중 하나다.
+ */
 export interface Incident {
   day: number;
+  /** 피해자. 옥사 이변이면 null */
+  victim: string | null;
+  /** 읽을 수 있는 단서. 값은 범인 요괴의 프로필과 같다 */
+  clues: Partial<Profile>;
+  /** 옥사 이변일 때 그날 밤 옥에 갇혀 있던 사람들 (범인은 이 중 하나) */
+  prevented?: SuspectId[];
+}
+
+/** 판을 만들 때 정해 두는 그날의 사건 계획 (정답 포함, 플레이어에게 그대로 보이지 않는다) */
+export interface PlannedIncident {
+  day: number;
   victim: string;
-  /** 사건 일지의 6종 단서 값 (범인 요괴의 프로필과 같다) */
+  /** 범인 요괴의 프로필 전체 */
   clues: Profile;
+  /** 사건 일지에서 읽을 수 있는 단서 종류. 장소는 항상 포함된다 */
+  legible: CategoryId[];
 }
 
 /** 시드로부터 만들어지는 한 판의 정답과 일정. 생성 후 바뀌지 않는다. */
@@ -22,9 +41,9 @@ export interface Board {
   seed: string;
   civilianId: SuspectId;
   profiles: Record<SuspectId, Profile>;
-  /** 1~4일차에 사건을 일으키는 요괴 */
+  /** 1~4일차 밤에 사건을 일으키려는 요괴 (그 요괴가 옥에 갇혀 있으면 옥사 이변) */
   eventOrder: SuspectId[];
-  incidents: Incident[];
+  incidents: PlannedIncident[];
   /**
    * 요괴마다 심문에서 수법이 나오는 순서 (6종을 무작위로 섞은 것).
    * 플레이어가 그 요괴를 고를 때마다 앞에서부터 하나씩 나온다. 한 번 나온 종류는 다시 나오지 않는다.
