@@ -6,6 +6,7 @@
  */
 import { SUSPECTS } from '../core/data';
 import { emphasisHtml, parseEmphasis } from './emphasis';
+import { faceCrop } from './faces';
 import { html, raw, type Raw } from './html';
 
 /** **강조**를 살린 한 줄 */
@@ -17,7 +18,7 @@ export const emText = (text: string): Raw => {
 const face = (id: string, extra = '') => {
   const p = SUSPECTS.find((s) => s.id === id)!;
   return html`<span class="tut-face ${extra}"
-    ><img src="${p.portrait}" alt="" /><small>${p.name}</small></span
+    >${faceCrop(p.portrait, 'tut-face-img')}<small>${p.name}</small></span
   >`;
 };
 

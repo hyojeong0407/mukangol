@@ -15,6 +15,7 @@ import { suspectPortrait } from './assets';
 import { circleSvg } from './circles';
 import { html, raw, type Raw } from './html';
 import { jailerOf, namesOf } from './story';
+import { faceCrop } from './faces';
 import { tipView, type TipKey } from './tutorial';
 
 export type View = 'today' | 'caselog' | 'interrogation' | 'board' | 'suspects';
@@ -213,32 +214,41 @@ function afternoonView(s: GameState, ui: UiState): Raw {
   const askable = askableSuspects(s);
   const done = s.questionPoints === 0 || askable.length === 0;
   const empty = !s.detained.length;
+  const jailerSrc = `images/characters/char-${jailer}-default.webp`;
+  // PC: 왼쪽에 담당 포졸 카드, 오른쪽에 대화·질문. 모바일: 큰 그림 없이 말하는 얼굴 + 큰 질문 버튼 (CSS에서 나눈다)
   return html`<section class="interrogate">
-    ${empty || done ? '' : tipView('ask', ui.tips)}
-    <figure class="shaman">
-      ${castPortrait(`images/characters/char-${jailer}-default.webp`, `${jailerInfo}`)}
+    <figure class="jailer-card">
+      ${castPortrait(jailerSrc, `${jailerInfo}`)}
       <figcaption>${jailerInfo} <small>옥사 심문 담당</small></figcaption>
     </figure>
     <div class="dialogue">
-      <div class="speech">
-        ${
-          empty
-            ? '「옥이 비어 있습니다, 나리. 현암 놈은 제 눈앞에 세운 자에 대해서만 입을 엽니다.」'
-            : done
-              ? ui.reportPending
-                ? '「다녀오겠습니다, 나리!」'
-                : '「현암 놈이 한 말은 심문 일지에 모두 적었습니다.」'
-              : `「갇힌 ${namesOf(s.detained)} 가운데 누구에 대해 캐물어 올까요, 나리?」`
-        }
+      ${empty || done ? '' : tipView('ask', ui.tips)}
+      <div class="speech-row">
+        ${faceCrop(jailerSrc, 'speaker-face')}
+        <div class="speech">
+          <b class="speech-name">${jailerInfo}</b>
+          ${
+            empty
+              ? '「옥이 비어 있습니다, 나리. 현암 놈은 제 눈앞에 세운 자에 대해서만 입을 엽니다.」'
+              : done
+                ? ui.reportPending
+                  ? '「다녀오겠습니다, 나리!」'
+                  : '「현암 놈이 한 말은 심문 일지에 모두 적었습니다.」'
+                : `「갇힌 ${namesOf(s.detained)} 가운데 누구에 대해 캐물어 올까요, 나리?」`
+          }
+        </div>
       </div>
       <div class="qp-row" aria-label="남은 질문 ${s.questionPoints}개">질문 ${points}</div>
       ${
         done
           ? ''
-          : html`<p class="help">
-                옥에 갇힌 자를 고르면 그 요괴의 수법 여섯 가지 중 아직 듣지 못한 것 하나를 캐물어 옵니다. 어떤
-                수법이 나올지는 정할 수 없습니다.
-              </p>
+          : html`${
+                ui.tips.includes('ask')
+                  ? html`<p class="help">
+                      갇힌 자를 고르면 그 요괴의 수법 하나를 캐물어 옵니다. 무엇이 나올지는 고를 수 없습니다.
+                    </p>`
+                  : ''
+              }
               <ul class="questions">
                 ${SUSPECTS.filter((p) => s.detained.includes(p.id)).map((p) => {
                   const left = remainingFor(s, p.id);
@@ -249,8 +259,12 @@ function afternoonView(s: GameState, ui: UiState): Raw {
                       data-id="${p.id}"
                       ${left > 0 ? '' : raw('disabled')}
                     >
-                      <b>${p.yokai}</b> <small>(${p.name})</small>에 대해 캐물어라
-                      <small class="dim">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
+                      ${faceCrop(p.portrait, 'q-face')}
+                      <span class="q-text">
+                        <span><b>${p.yokai}</b> <small>${p.name}</small></span>
+                        <small class="q-left">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
+                      </span>
+                      <span class="q-go" aria-hidden="true">캐묻기 ›</span>
                     </button>
                   </li>`;
                 })}

@@ -588,26 +588,52 @@ input {
 /* ---------- 심문 ---------- */
 .interrogate {
   display: grid;
-  grid-template-columns: minmax(200px, 340px) 1fr;
-  gap: 1.5rem;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 2rem;
   align-items: start;
+  max-width: 1000px;
+  margin: 0 auto;
 }
-.shaman {
+.interrogate .dialogue {
+  min-width: 0;
+}
+.speech-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.speech-row .speech {
+  flex: 1;
+}
+/* PC: 말하는 얼굴·이름은 왼쪽 카드가 대신한다 */
+.speaker-face,
+.speech-name {
+  display: none;
+}
+.jailer-card {
   margin: 0;
-  position: relative;
+  position: sticky;
+  top: 6rem;
 }
-.shaman img {
+/* 전신 대신 상반신만: 화면 높이를 넘지 않게 */
+.jailer-card img {
+  display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 4 / 5;
+  max-height: 60vh;
+  object-fit: cover;
+  object-position: 50% 6%;
   border-radius: var(--radius);
   box-shadow: 0 10px 30px #000;
   filter: saturate(0.85);
+  background: radial-gradient(circle at 50% 30%, #3a3a46, #15151b 75%);
 }
-.shaman figcaption {
+.jailer-card figcaption {
   margin-top: 0.4rem;
   font-weight: 800;
 }
-.shaman figcaption small {
+.jailer-card figcaption small {
   font-weight: 400;
   opacity: 0.7;
   margin-left: 0.4rem;
@@ -649,8 +675,48 @@ input {
 }
 .btn-question {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem 1rem;
+  min-height: 4.6rem;
   text-align: left;
   background: rgba(232, 223, 200, 0.08);
+}
+.btn-question:not([disabled]):hover {
+  background: rgba(232, 223, 200, 0.16);
+  border-color: var(--hanji);
+}
+.q-face {
+  flex: none;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--hanji);
+}
+.q-text {
+  flex: 1;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.q-text b {
+  font-size: 1.15rem;
+}
+.q-text small {
+  opacity: 0.8;
+}
+.q-left {
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+.q-go {
+  flex: none;
+  font-weight: 700;
+  color: #f2cf7a;
+}
+.btn-question[disabled] .q-go {
+  visibility: hidden;
 }
 .hint-card {
   margin: 1rem 0;
@@ -1058,12 +1124,35 @@ input {
 
 /* ---------- 반응형 ---------- */
 @media (max-width: 900px) {
+  /* 모바일·태블릿 심문: 큰 그림 없이 말하는 얼굴 + 큰 질문 버튼 */
   .interrogate {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
-  .shaman {
-    max-width: 260px;
-    margin: 0 auto;
+  .jailer-card {
+    display: none;
+  }
+  .speaker-face {
+    display: block;
+    flex: none;
+    width: 4.2rem;
+    height: 4.2rem;
+    border-radius: 50%;
+    border: 2px solid var(--hanji);
+  }
+  .speech-name {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.75;
+    margin-bottom: 0.15rem;
+  }
+  .speech {
+    font-size: 1rem;
+    padding: 0.7rem 0.9rem;
+  }
+  .btn-question {
+    min-height: 4.2rem;
+    padding: 0.5rem 0.8rem;
   }
   .exec-cards {
     grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
@@ -1991,14 +2080,9 @@ em.hl {
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.6);
   animation: csFaceIn 0.3s both;
 }
-.cs-face img {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 250%;
-  height: auto;
-  /* 얼굴은 대체로 그림 위쪽 15~30%: 그 근처가 칸 가운데 오도록 */
-  transform: translate(-50%, -6%);
+.cs-face .face-crop {
+  width: 100%;
+  height: 100%;
 }
 .cs-box.has-face .cs-name {
   left: calc(var(--face) + 2.4rem);
@@ -2242,11 +2326,9 @@ em.hl {
   width: 4.4rem;
   font-size: 0.75rem;
 }
-.tut-face img {
+.tut-face .face-crop {
   width: 4.2rem;
   height: 4.2rem;
-  object-fit: cover;
-  object-position: 50% 12%;
   border: 2px solid var(--ink-text);
   border-radius: 50%;
   background: #ddd3bd;
@@ -2463,7 +2545,7 @@ em.hl {
   .tut-face {
     width: 3.6rem;
   }
-  .tut-face img {
+  .tut-face .face-crop {
     width: 3.4rem;
     height: 3.4rem;
   }
@@ -2528,4 +2610,35 @@ em.hl {
   .coach .btn-small {
     margin-left: auto;
   }
+}
+
+/* ---------- 얼굴 칸 (src/ui/faces.ts) ----------
+ * 전신 그림을 --z배로 키우고, 얼굴 가운데(--fx, --fy)가 칸 가운데 오도록 옮긴다. */
+.face-crop {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #4a4a58, #15151b 75%);
+}
+.face-crop img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--z, 2.6) * 100%);
+  max-width: none;
+  height: auto;
+  transform: translate(calc(var(--fx, 0.5) * -100%), calc(var(--fy, 0.24) * -100%));
+}
+
+/* 처음 안내의 확인 버튼: 종이 위에서 눌리는 버튼으로 보이게 */
+.coach .btn-small {
+  background: var(--ink-text);
+  color: #fbf3d5;
+  border-color: var(--ink-text);
+}
+.coach .btn-small:hover {
+  background: #000;
+}
+.next-bar .btn {
+  white-space: nowrap;
 }

@@ -5,6 +5,7 @@ import type { Mood } from '../scenes/fx';
 import { bgSrc, suspectPortrait } from './assets';
 import { circleSvg } from './circles';
 import { emphasisHtml, parseEmphasis } from './emphasis';
+import { faceCrop } from './faces';
 import { html, raw, type Raw } from './html';
 
 /**
@@ -267,7 +268,7 @@ export class CutscenePlayer {
               .value
           : '';
         if (sp.portrait) {
-          face.innerHTML = html`<img src="${sp.portrait}" alt="" />`.value;
+          face.innerHTML = faceCrop(sp.portrait, 'cs-face-crop').value;
           box.classList.add('has-face');
         }
         nameEl.textContent = sp.name;
