@@ -8,19 +8,20 @@ import { html, type Raw } from './html';
 
 type Focus = { fx: number; fy: number; z: number };
 
-const DEFAULT: Focus = { fx: 0.5, fy: 0.24, z: 2.6 };
+const DEFAULT: Focus = { fx: 0.5, fy: 0.27, z: 2.6 };
 
 const FOCUS: Record<string, Focus> = {
-  beomgol: { fx: 0.49, fy: 0.25, z: 2.7 },
-  mukjip: { fx: 0.5, fy: 0.19, z: 2.5 },
-  mul: { fx: 0.5, fy: 0.175, z: 4 },
-  soedol: { fx: 0.49, fy: 0.235, z: 3 },
-  yeonhwa: { fx: 0.49, fy: 0.22, z: 3 },
-  'pojol-1': { fx: 0.51, fy: 0.27, z: 2.6 },
-  'pojol-2': { fx: 0.5, fy: 0.255, z: 2.6 },
-  'pojol-3': { fx: 0.47, fy: 0.285, z: 2.6 },
-  protagonist: { fx: 0.49, fy: 0.28, z: 2.6 },
-  shaman: { fx: 0.43, fy: 0.31, z: 2.5 },
+  // v0.6.3: 누끼 제거판(1600px 원본) 기준
+  beomgol: { fx: 0.5, fy: 0.3, z: 2.7 },
+  mukjip: { fx: 0.5, fy: 0.275, z: 2.5 },
+  mul: { fx: 0.5, fy: 0.236, z: 3.8 },
+  soedol: { fx: 0.53, fy: 0.244, z: 3 },
+  yeonhwa: { fx: 0.5, fy: 0.24, z: 3 },
+  'pojol-1': { fx: 0.5, fy: 0.278, z: 2.6 },
+  'pojol-2': { fx: 0.515, fy: 0.27, z: 2.6 },
+  'pojol-3': { fx: 0.5, fy: 0.278, z: 2.6 },
+  protagonist: { fx: 0.515, fy: 0.307, z: 2.6 },
+  shaman: { fx: 0.42, fy: 0.293, z: 2.5 },
 };
 
 /** 그림 경로에서 인물 id: images/characters/char-shaman-default.webp → shaman */
