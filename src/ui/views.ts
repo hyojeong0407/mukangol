@@ -15,6 +15,7 @@ import { suspectPortrait } from './assets';
 import { circleSvg } from './circles';
 import { html, raw, type Raw } from './html';
 import { jailerOf, namesOf } from './story';
+import { tipView, type TipKey } from './tutorial';
 
 export type View = 'today' | 'caselog' | 'interrogation' | 'board' | 'suspects';
 
@@ -33,6 +34,8 @@ export interface UiState {
   flash: string | null;
   /** 구속·해제 때 용의자가 하는 말 */
   speech: { id: string; text: string } | null;
+  /** 이미 본 상황별 안내 (설정에서 옮겨 온다) */
+  tips: readonly string[];
 }
 
 const MARK_LABEL: Record<Exclude<Mark, ''>, string> = {
@@ -169,16 +172,25 @@ function morningView(s: GameState, ui: UiState): Raw {
     <p class="report">
       ${inc.prevented ? TEXTS.preventedReport : TEXTS.patrolReport[(s.day - 1) % TEXTS.patrolReport.length]}
     </p>
-    ${journal(inc, true)} ${prisonSection(s, ui, '오늘 오후에 심문할 사람을 옥에 가두십시오.')}
+    ${
+      s.detained.length
+        ? ''
+        : html`<p class="jump-note">
+            오후 심문 전에 <em class="hl">옥에 두 명을 가두십시오.</em>
+            <a class="btn btn-small" href="#prison-title">옥사로 ↓</a>
+          </p>`
+    }
+    ${journal(inc, true)} ${prisonSection(s, ui, '오늘 오후에 심문할 사람을 옥에 가두십시오.', 'prison')}
   </section>`;
 }
 
 /** 옥사 칸: 누구를 가둘지 고른다 (오전·밤) */
-function prisonSection(s: GameState, ui: UiState, lead: string): Raw {
+function prisonSection(s: GameState, ui: UiState, lead: string, tip: TipKey): Raw {
   return html`<section class="prison" aria-labelledby="prison-title">
     <h3 id="prison-title" class="sub-h">
       옥사 <small>${s.detained.length} / ${CONFIG.maxDetained}칸</small>
     </h3>
+    ${tipView(tip, ui.tips)}
     <p class="help">
       ${lead} 심문은 <b>갇힌 사람에게만</b> 할 수 있고, 갇힌 요괴는 <b>그날 밤 사건을 일으키지 못합니다</b>.
       구속은 처형이 아닙니다.
@@ -202,6 +214,7 @@ function afternoonView(s: GameState, ui: UiState): Raw {
   const done = s.questionPoints === 0 || askable.length === 0;
   const empty = !s.detained.length;
   return html`<section class="interrogate">
+    ${empty || done ? '' : tipView('ask', ui.tips)}
     <figure class="shaman">
       ${castPortrait(`images/characters/char-${jailer}-default.webp`, `${jailerInfo}`)}
       <figcaption>${jailerInfo} <small>옥사 심문 담당</small></figcaption>
@@ -275,6 +288,7 @@ function nightView(s: GameState, ui: UiState): Raw {
       s.day === CONFIG.totalDays - 1
         ? '오늘 밤 가둘 사람을 정하십시오. 내일(5일차) 오전 마지막 심문은 이 사람들에게 합니다.'
         : '오늘 밤 가둘 사람을 정하십시오. 내일 오전에 다시 바꿀 수 있습니다.',
+      'night',
     )}
   </section>`;
 }
@@ -462,7 +476,8 @@ export function boardView(s: GameState, ui: UiState): Raw {
   </button>`;
   return html`<section class="paper board-wrap">
     <h2 class="brush">검험 기록판</h2>
-    ${dayTabs('boardday', page, s, summaryTab)} ${page === 0 ? boardSummary(s) : boardPage(s, page)}
+    ${dayTabs('boardday', page, s, summaryTab)} ${page === 0 ? '' : tipView('board', ui.tips)}
+    ${page === 0 ? boardSummary(s) : boardPage(s, page)}
   </section>`;
 }
 

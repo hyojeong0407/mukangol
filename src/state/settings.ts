@@ -7,6 +7,8 @@ export interface Settings {
   reduceMotion: boolean;
   /** 대사가 끝나면 자동으로 다음 대사로 */
   autoAdvance: boolean;
+  /** 이미 본 상황별 안내(튜토리얼 팁) */
+  tipsSeen: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -15,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textScale: 1,
   reduceMotion: false,
   autoAdvance: true,
+  tipsSeen: [],
 };
 
 export function loadSettings(): Settings {

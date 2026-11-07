@@ -4,6 +4,7 @@ import type { Hint, Incident } from '../core/types';
 import type { Mood } from '../scenes/fx';
 import { bgSrc, suspectPortrait } from './assets';
 import { circleSvg } from './circles';
+import { emphasisHtml, parseEmphasis } from './emphasis';
 import { html, raw, type Raw } from './html';
 
 /**
@@ -171,10 +172,12 @@ export class CutscenePlayer {
       <div class="cs-center"></div>
       <div class="cs-portrait" aria-hidden="true"></div>
       <div class="cs-box" aria-live="polite">
+        <div class="cs-face" aria-hidden="true"></div>
         <div class="cs-name"></div>
         <div class="cs-text"></div>
         <div class="cs-next" aria-hidden="true">▼</div>
       </div>
+      <div class="cs-tap" aria-hidden="true">눌러서 계속 ▼</div>
       <div class="cs-controls">
         <button type="button" class="cs-btn" data-cs="auto" aria-pressed="${auto}">
           ${auto ? '자동 ▶' : '수동 ⏸'}
@@ -228,8 +231,12 @@ export class CutscenePlayer {
     const nameEl = this.q('.cs-name');
     const center = this.q('.cs-center');
     const portrait = this.q('.cs-portrait');
+    const face = this.q('.cs-face');
     const root = this.q('.cs-root');
+    const prevKind = root.dataset.kind;
     root.dataset.kind = step.t;
+    face.innerHTML = '';
+    box.classList.remove('has-face');
 
     let text = '';
     let showBox = true;
@@ -254,18 +261,24 @@ export class CutscenePlayer {
       case 'line': {
         const sp = speaker(step.who);
         center.innerHTML = '';
+        // 넓은 화면: 뒤에 서 있는 전신 / 대사창: 누가 말하는지 보이는 네모 얼굴 칸
         portrait.innerHTML = sp.portrait
           ? html`<img src="${sp.portrait}" alt="" class="${step.who === 'protagonist' ? 'left' : 'right'}" />`
               .value
           : '';
+        if (sp.portrait) {
+          face.innerHTML = html`<img src="${sp.portrait}" alt="" />`.value;
+          box.classList.add('has-face');
+        }
         nameEl.textContent = sp.name;
         text = step.text;
         break;
       }
       case 'journal': {
         const sp = speaker(step.reader);
-        center.innerHTML = journalHtml(step.incident, step.upTo).value;
-        center.querySelector('.is-new')?.scrollIntoView({ block: 'nearest' });
+        // 일지는 처음 펼칠 때만 번져 나오고, 이후에는 새 항목만 움직인다
+        center.innerHTML = journalHtml(step.incident, step.upTo, prevKind !== 'journal').value;
+        center.querySelector('.is-new')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         portrait.innerHTML = '';
         nameEl.textContent = sp.name;
         text = step.text;
@@ -275,7 +288,7 @@ export class CutscenePlayer {
       }
       case 'hints': {
         const sp = speaker(step.reader);
-        center.innerHTML = hintsHtml(step.hints, step.upTo).value;
+        center.innerHTML = hintsHtml(step.hints, step.upTo, prevKind !== 'hints').value;
         portrait.innerHTML = sp.portrait ? html`<img src="${sp.portrait}" alt="" class="right" />`.value : '';
         nameEl.textContent = sp.name;
         text = step.text;
@@ -309,8 +322,10 @@ export class CutscenePlayer {
       }
     }
 
+    // 일지·보고 장면은 화면 가운데 기록 자체가 대사이므로, 아래 대사창은 숨기고
+    // 화면 읽기 프로그램에만 읽힌다 (같은 글이 두 번 보이지 않게)
     box.hidden = !showBox && step.t !== 'journal' && step.t !== 'hints';
-    box.classList.toggle('cs-box-mini', !showBox);
+    box.classList.toggle('cs-box-sr', step.t === 'journal' || step.t === 'hints');
     const textEl = this.q('.cs-text');
     textEl.textContent = '';
     box.classList.remove('done');
@@ -352,9 +367,12 @@ export class CutscenePlayer {
     window.clearTimeout(this.autoTimer);
   }
 
+  /** 한 글자씩 찍기. **강조** 표시는 강조된 채로 찍힌다 */
   private typewriter(el: HTMLElement, text: string, animate: boolean): Promise<void> {
+    const segs = parseEmphasis(text);
+    const total = segs.reduce((n, s) => n + s.text.length, 0);
     if (!animate || !text) {
-      el.textContent = text;
+      el.innerHTML = emphasisHtml(segs, total);
       this.typing = null;
       return Promise.resolve();
     }
@@ -362,12 +380,12 @@ export class CutscenePlayer {
       let i = 0;
       const timer = window.setInterval(() => {
         i += 1;
-        el.textContent = text.slice(0, i);
-        if (i >= text.length) finish();
+        el.innerHTML = emphasisHtml(segs, i);
+        if (i >= total) finish();
       }, 32);
       const finish = () => {
         window.clearInterval(timer);
-        el.textContent = text;
+        el.innerHTML = emphasisHtml(segs, total);
         this.typing = null;
         resolve();
       };
@@ -378,7 +396,7 @@ export class CutscenePlayer {
 
 /* ---------------- 재생용 화면 조각 ---------------- */
 
-function journalHtml(inc: Incident, upTo: number): Raw {
+function journalHtml(inc: Incident, upTo: number, opening: boolean): Raw {
   const items = CATEGORIES.map((c, i) => {
     const state = i < upTo - 1 ? 'is-shown' : i === upTo - 1 ? 'is-shown is-new' : 'is-hidden';
     if (i >= upTo)
@@ -402,7 +420,9 @@ function journalHtml(inc: Incident, upTo: number): Raw {
       ${c.id === 'circle' ? html`<div class="circle-art">${raw(circleSvg(v.id))}</div>` : ''}
     </li>`;
   });
-  return html`<article class="book cs-book ${inc.prevented ? 'is-prevented' : ''}">
+  return html`<article
+    class="book cs-book ${opening ? 'is-opening' : ''} ${inc.prevented ? 'is-prevented' : ''}"
+  >
     <header class="book-head">
       ${
         inc.prevented
@@ -421,8 +441,8 @@ function journalHtml(inc: Incident, upTo: number): Raw {
   </article>`;
 }
 
-function hintsHtml(hints: Hint[], upTo: number): Raw {
-  return html`<div class="cs-hints">
+function hintsHtml(hints: Hint[], upTo: number, opening: boolean): Raw {
+  return html`<div class="cs-hints ${opening ? 'is-opening' : ''}">
     <h3 class="brush">심문 일지</h3>
     <ol>
       ${hints.map((h, i) => {

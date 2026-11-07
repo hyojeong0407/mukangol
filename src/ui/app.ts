@@ -11,6 +11,7 @@ import { suspectPortrait } from './assets';
 import { CutscenePlayer, readMs, type Step } from './cutscene';
 import { html, raw, type Raw } from './html';
 import * as S from './story';
+import { tutorialView, TUTORIAL } from './tutorial';
 import * as V from './views';
 
 type Screen = 'title' | 'intro' | 'howto' | 'game' | 'ending';
@@ -36,6 +37,9 @@ export class App {
   private returnFocus: string | null = null;
   private cs: CutscenePlayer;
   private speechTimer = 0;
+  /** 조사 방법 카드 쪽수, 다 보면 어디로 돌아갈지 (새 게임 시작 / 진행 중인 판 / 타이틀) */
+  private tutPage = 0;
+  private tutReturn: 'start' | 'game' | 'title' = 'start';
 
   constructor(
     private root: HTMLElement,
@@ -94,6 +98,8 @@ export class App {
       this.render();
       await this.play(S.prologueSteps());
       await this.play(S.openingSteps());
+      this.tutPage = 0;
+      this.tutReturn = 'start';
       this.screen = 'howto';
       this.render();
       return;
@@ -317,7 +323,36 @@ export class App {
         this.render();
         return;
       case 'howto-done':
-        return this.afterHowto();
+        if (this.tutReturn === 'start') return this.afterHowto();
+        this.screen = this.tutReturn === 'game' && this.state ? 'game' : 'title';
+        this.render();
+        return;
+      case 'howto-open':
+        // 설정에서 "조사 방법 다시 보기"
+        this.modal = null;
+        this.tutPage = 0;
+        this.tutReturn = this.screen === 'game' && this.state ? 'game' : 'title';
+        this.screen = 'howto';
+        this.render();
+        return;
+      case 'tut-next':
+      case 'tut-prev':
+      case 'tut-go':
+        sound.play('paper');
+        this.tutPage = a === 'tut-go' ? Number(el.dataset.page) : this.tutPage + (a === 'tut-next' ? 1 : -1);
+        this.tutPage = Math.max(0, Math.min(TUTORIAL.length - 1, this.tutPage));
+        this.render();
+        this.root.querySelector<HTMLElement>('[data-action="tut-next"], [data-action="howto-done"]')?.focus();
+        return;
+      case 'tips-reset':
+        this.updateSettings({ tipsSeen: [] });
+        this.flash('처음 안내를 다시 띄웁니다.');
+        return;
+      case 'tip-ok': {
+        const key = el.dataset.tip!;
+        this.updateSettings({ tipsSeen: [...new Set([...this.settings.tipsSeen, key])] });
+        return;
+      }
       case 'settings':
         return this.openModal('settings', el);
       case 'close-modal':
@@ -454,6 +489,12 @@ export class App {
       e.altKey
     )
       return;
+    if (this.screen === 'howto') {
+      if (e.key === 'ArrowRight') this.root.querySelector<HTMLElement>('[data-action="tut-next"]')?.click();
+      if (e.key === 'ArrowLeft')
+        this.root.querySelector<HTMLElement>('[data-action="tut-prev"]:not([disabled])')?.click();
+      return;
+    }
     if (this.screen !== 'game' || !this.state) return;
     const views: V.View[] = ['today', 'caselog', 'interrogation', 'board', 'suspects'];
     const n = Number(e.key);
@@ -480,6 +521,7 @@ export class App {
   /* ---------------- 그리기 ---------------- */
 
   render() {
+    this.ui.tips = this.settings.tipsSeen;
     const body = {
       title: () => this.titleScreen(),
       intro: () => html`<main class="intro-backdrop" aria-hidden="true"></main>`,
@@ -537,44 +579,9 @@ export class App {
     </main>`;
   }
 
+  /** 조사 방법: 카드 한 장에 개념 하나 (src/ui/tutorial.ts) */
   private howtoScreen(): Raw {
-    return html`<main class="prologue">
-      <div class="paper prologue-paper">
-        <h2 class="brush">조사 방법</h2>
-        <ul class="howto">
-          <li style="--i:0"><b>새벽</b> 의식이 열려 피해자가 생긴다. 포졸이 달려와 사건을 알린다.</li>
-          <li style="--i:1">
-            <b>오전</b> 포졸이 <b>사건 일지</b>를 읽어 준다. 단서는 그 사건을 일으킨 요괴의 수법이지만, 여섯
-            중 둘은 핏물에 번져 <b>판독할 수 없다</b>. 그리고 오후에 심문할 사람을 <b>옥에 가둔다</b>.
-          </li>
-          <li style="--i:2">
-            <b>옥사는 두 칸</b>. 주술사는 <b>옥에 갇힌 자</b>에 대해서만 입을 연다. 하루 두 번, 갇힌 자를
-            고르면 그 요괴의 수법 여섯 가지(훼손·유인·재물·언어·장소·진) 중 하나가 <b>무작위로</b> 나와
-            <b>심문 일지</b>에 적힌다. 주술사의 말에는 거짓이 없다. 다만 같은 수법을 두 요괴가 겹쳐 쓰기도
-            한다.
-          </li>
-          <li style="--i:3">
-            <b>밤</b> <b>검험 기록판</b>에서 단서와 힌트를 대조하고, 오늘 밤 가둘 자를 정한다.
-            <b>갇힌 요괴는 그날 밤 사건을 일으키지 못한다.</b> 막아 내면 희생자 대신 <b>옥사 이변</b>이
-            기록되고, 범인은 갇혀 있던 둘 중 하나다. 희생자가 넷이 되면 이겨도 씁쓸한 끝을 맞는다.
-          </li>
-          <li style="--i:4">
-            <b>5일차</b> 넷을 처형한다. 다섯 아낙은 저마다 요괴의 이름을 달고 있지만, 그중 하나는 사람이다. 한
-            번도 사건(옥사 이변 포함)을 일으키지 않은 자가 사람이다.
-          </li>
-        </ul>
-        <ul class="yokai-map">
-          ${SUSPECTS.map(
-            (p) =>
-              html`<li>
-                <img src="${p.portrait}" alt="" width="80" height="100" /><b>${p.name}</b
-                ><span>${p.yokai}</span>
-              </li>`,
-          )}
-        </ul>
-        <button class="btn btn-primary" data-action="howto-done" autofocus>첫 새벽을 맞는다 ></button>
-      </div>
-    </main>`;
+    return tutorialView(this.tutPage, this.tutReturn !== 'start');
   }
 
   private gameScreen(): Raw {
@@ -702,6 +709,12 @@ export class App {
           ><input type="checkbox" name="reduceMotion" ${st.reduceMotion ? raw('checked') : ''} /> 연출 줄이기
           (흔들림·번쩍임·움직임 끄기)</label
         >
+        <div class="row">
+          <button class="btn" data-action="howto-open">조사 방법 다시 보기</button>
+          <button class="btn" data-action="tips-reset" ${st.tipsSeen.length ? '' : raw('disabled')}>
+            처음 안내 다시 띄우기
+          </button>
+        </div>
         ${this.state ? html`<p class="dim">판 번호: <code>${this.state.seed}</code> (버그 신고 때 알려 주세요)</p>` : ''}
         <button class="btn btn-danger-outline" data-action="clear-save" ${this.state ? '' : raw('disabled')}>
           저장 데이터 삭제
@@ -747,5 +760,6 @@ function freshUi(): V.UiState {
     seenHints: 0,
     flash: null,
     speech: null,
+    tips: [],
   };
 }

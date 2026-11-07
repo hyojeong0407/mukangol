@@ -3,7 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 // 규칙 흐름 테스트는 배경 연출(Phaser)과 음성 없이 돌린다. 연출 레이어는 아래 별도 테스트에서 확인한다.
 test.beforeEach(async ({ page }, info) => {
   await page.addInitScript(() => {
-    localStorage.setItem('mukangol.settings.v1', JSON.stringify({ autoAdvance: true, reduceMotion: true }));
+    // 새로고침해도 설정(이미 본 안내 등)이 남도록, 처음 한 번만 넣는다
+    if (!localStorage.getItem('mukangol.settings.v1'))
+      localStorage.setItem('mukangol.settings.v1', JSON.stringify({ autoAdvance: true, reduceMotion: true }));
   });
   if (!info.title.includes('연출')) await page.route('**/fx-*.js', (r) => r.abort());
 });
@@ -39,7 +41,7 @@ async function start(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: '새 게임' }).click();
   await settle(page); // 프롤로그 → 오프닝
-  await page.getByRole('button', { name: /첫 새벽을 맞는다/ }).click();
+  await page.locator('.tut-skip').click(); // 조사 방법 카드 건너뛰기
   await settle(page); // 1일차 새벽 → 사건 일지
 }
 
@@ -219,8 +221,47 @@ test('연출 레이어와 컷신이 오류 없이 뜬다', async ({ page }) => {
   await expect(page.locator('.cs-root')).toBeVisible();
   await page.locator('.cs-root').click(); // 한 장면 넘기기
   await settle(page);
+  // 조사 방법: 카드를 끝까지 넘기면 "첫 새벽을 맞는다"
+  await expect(page.locator('.tut-card')).toBeVisible();
+  const cards = await page.locator('.tut-dot').count();
+  for (let i = 1; i < cards; i++) await page.getByRole('button', { name: '다음 ›' }).click();
   await expect(page.getByRole('button', { name: /첫 새벽을 맞는다/ })).toBeVisible();
+  await page.getByRole('button', { name: '‹ 이전' }).click();
+  await expect(page.locator('.tut-count')).toContainText(`${cards - 1} / ${cards}`);
   expect(errors).toEqual([]);
+});
+
+test('처음 안내는 한 번 보면 다시 뜨지 않고, 대사의 강조가 형광펜으로 보인다', async ({ page }) => {
+  await start(page);
+  const tip = page.locator('.coach');
+  await expect(tip).toBeVisible();
+  await expect(tip.locator('em.hl').first()).toBeVisible();
+  await tip.getByRole('button', { name: '알겠습니다' }).click();
+  await expect(page.locator('.coach')).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: '이어하기' }).click();
+  await expect(page.locator('.prison')).toBeVisible();
+  await expect(page.locator('.coach')).toHaveCount(0);
+});
+
+test('사건 일지 재생 중에는 아래 대사창이 보이지 않는다', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('mukangol.settings.v1', JSON.stringify({ autoAdvance: false, reduceMotion: true })),
+  );
+  await page.goto('/');
+  await page.getByRole('button', { name: '새 게임' }).click();
+  await settle(page); // 프롤로그 → 오프닝
+  await page.locator('.tut-skip').click(); // 조사 방법 건너뛰기
+  await expect(page.locator('.cs-root')).toBeVisible(); // 1일차 새벽
+  for (let i = 0; i < 30; i++) {
+    if ((await page.locator('.cs-root').getAttribute('data-kind')) === 'journal') break;
+    await page.locator('.cs-root').click();
+  }
+  await expect(page.locator('.cs-root')).toHaveAttribute('data-kind', 'journal');
+  await expect(page.locator('.cs-book')).toBeVisible();
+  // 같은 글은 화면 읽기 프로그램용으로만 남고 화면에는 보이지 않는다
+  expect(await page.locator('.cs-box').evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(3);
+  await expect(page.locator('.cs-tap')).toBeVisible();
 });
 
 test('화면마다 동업자 배경음이 바뀐다 (audio-spec.md)', async ({ page }) => {

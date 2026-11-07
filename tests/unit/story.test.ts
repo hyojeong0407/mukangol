@@ -76,3 +76,28 @@ describe('연출 대본', () => {
     expect(S.detainLine('mul', false, 3)).toBeTruthy();
   });
 });
+
+describe('강조 표시 (**)', () => {
+  it('글자 찍기 도중에도 강조가 유지되고, HTML은 이스케이프된다', async () => {
+    const { parseEmphasis, emphasisHtml } = await import('../../src/ui/emphasis');
+    const segs = parseEmphasis('옥사는 **두 칸**뿐 <b>');
+    expect(emphasisHtml(segs, 5)).toBe('옥사는 <em class="hl">두</em>');
+    expect(emphasisHtml(segs, 99)).toBe('옥사는 <em class="hl">두 칸</em>뿐 &lt;b&gt;');
+  });
+  it('대본의 ** 는 모두 짝이 맞는다', async () => {
+    const scripts = (await import('../../src/data/scripts.json')).default as unknown;
+    const bad: string[] = [];
+    const walk = (x: unknown, path: string) => {
+      if (typeof x === 'string') {
+        if ((x.split('**').length - 1) % 2) bad.push(path);
+      } else if (x && typeof x === 'object')
+        for (const [k, v] of Object.entries(x as Record<string, unknown>)) walk(v, `${path}.${k}`);
+    };
+    walk(scripts, 'scripts');
+    expect(bad).toEqual([]);
+  });
+  it('조사는 강조 표시를 건너뛰고 앞말 받침을 본다', () => {
+    expect(fill('**{v}**{이/가}', { v: '호랑이' })).toBe('**호랑이**가');
+    expect(fill('**{v}**{을/를}', { v: '범골댁과 물댁' })).toBe('**범골댁과 물댁**을');
+  });
+});
