@@ -222,7 +222,6 @@ function afternoonView(s: GameState, ui: UiState): Raw {
       <figcaption>${jailerInfo} <small>옥사 심문 담당</small></figcaption>
     </figure>
     <div class="dialogue">
-      ${empty || done ? '' : tipView('ask', ui.tips)}
       <div class="speech-row">
         ${faceCrop(jailerSrc, 'speaker-face')}
         <div class="speech">
@@ -242,33 +241,26 @@ function afternoonView(s: GameState, ui: UiState): Raw {
       ${
         done
           ? ''
-          : html`${
-                ui.tips.includes('ask')
-                  ? html`<p class="help">
-                      갇힌 자를 고르면 그 요괴의 수법 하나를 캐물어 옵니다. 무엇이 나올지는 고를 수 없습니다.
-                    </p>`
-                  : ''
-              }
-              <ul class="questions">
-                ${SUSPECTS.filter((p) => s.detained.includes(p.id)).map((p) => {
-                  const left = remainingFor(s, p.id);
-                  return html`<li>
-                    <button
-                      class="btn btn-question"
-                      data-action="ask"
-                      data-id="${p.id}"
-                      ${left > 0 ? '' : raw('disabled')}
-                    >
-                      ${faceCrop(p.portrait, 'q-face')}
-                      <span class="q-text">
-                        <span><b>${p.yokai}</b> <small>${p.name}</small></span>
-                        <small class="q-left">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
-                      </span>
-                      <span class="q-go" aria-hidden="true">캐묻기 ›</span>
-                    </button>
-                  </li>`;
-                })}
-              </ul>`
+          : html`<ul class="questions">
+              ${SUSPECTS.filter((p) => s.detained.includes(p.id)).map((p) => {
+                const left = remainingFor(s, p.id);
+                return html`<li>
+                  <button
+                    class="btn btn-question"
+                    data-action="ask"
+                    data-id="${p.id}"
+                    ${left > 0 ? '' : raw('disabled')}
+                  >
+                    ${faceCrop(p.portrait, 'q-face')}
+                    <span class="q-text">
+                      <span><b>${p.yokai}</b> <small>${p.name}</small></span>
+                      <small class="q-left">남은 수법 ${left} / ${CATEGORY_IDS.length}</small>
+                    </span>
+                    <span class="q-go" aria-hidden="true">캐묻기 ›</span>
+                  </button>
+                </li>`;
+              })}
+            </ul>`
       }
       ${
         asked.length

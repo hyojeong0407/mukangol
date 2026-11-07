@@ -129,7 +129,6 @@ export function tutorialView(page: number, inGame: boolean): Raw {
 /** 처음 한 번만 뜨는 상황별 짧은 안내 */
 export const TIPS = {
   prison: '여기서 **두 명**을 옥에 가두세요. 오후에는 **가둔 사람만** 심문할 수 있습니다.',
-  ask: '갇힌 자를 고르면 그 요괴의 **수법 하나**를 알아 옵니다. 하루 **두 번**.',
   board: '칸을 눌러 **가능 / 불가** 도장을 찍으세요. 사건 단서와 수법이 **다르면 불가**입니다.',
   night: '오늘 밤 범인일 것 같은 자를 가두면 **사건을 막을** 수 있습니다.',
 } as const;
