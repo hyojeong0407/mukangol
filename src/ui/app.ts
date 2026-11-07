@@ -567,7 +567,7 @@ export class App {
               </li>`,
           )}
         </ul>
-        <button class="btn btn-primary" data-action="howto-done" autofocus>첫 새벽을 맞는다 ›</button>
+        <button class="btn btn-primary" data-action="howto-done" autofocus>첫 새벽을 맞는다 ></button>
       </div>
     </main>`;
   }
@@ -612,7 +612,7 @@ export class App {
                 </figcaption>
               </figure>`;
             })}
-          </div>
+          </div><br>
           <p>사람이었던 이: <b>${civ.name}</b> (${civ.disguise})</p>
           <ol>
             ${s.board.eventOrder.map(
