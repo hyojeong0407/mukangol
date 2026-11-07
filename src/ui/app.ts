@@ -530,7 +530,7 @@ export class App {
           </button>
           <button class="btn btn-scroll" data-action="settings">설정</button>
         </div>
-        <p class="disclaimer">${TEXTS.disclaimer} 소리가 나옵니다. 대사는 음성으로 읽힙니다.</p>
+        <p class="disclaimer">${TEXTS.disclaimer} 소리가 나옵니다.<br />${TEXTS.aiNotice}</p>
       </div>
     </main>`;
   }
@@ -693,9 +693,7 @@ export class App {
         <button class="btn btn-danger-outline" data-action="clear-save" ${this.state ? '' : raw('disabled')}>
           저장 데이터 삭제
         </button>
-        <p class="dim small">
-          ${TEXTS.disclaimer} 대사 음성은 브라우저에 설치된 한국어 음성을 씁니다. 사운드는 임시 합성음입니다.
-        </p>
+        <p class="dim small">${TEXTS.disclaimer} ${TEXTS.aiNotice}</p>
       </div>
       <div class="row">
         ${this.screen === 'game' ? html`<button class="btn" data-action="title">타이틀로</button>` : ''}

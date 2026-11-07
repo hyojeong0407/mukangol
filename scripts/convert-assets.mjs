@@ -26,17 +26,36 @@ const IMAGE_JOBS = [
 
 const slug = (name) => name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
+/**
+ * 같은 그림의 판본이 여럿이면 우선순위가 높은 것 하나만 쓴다.
+ *   -no-watermark (워터마크 제거본, `_no-watermark`도 같음) > -v2 (투명 배경, 명세 규격) > 원본
+ * 판본 표시는 출력 파일명에서 뗀다. 예: char-mul-yokai_no-watermark.png → char-mul-yokai.webp
+ */
+const VARIANTS = [/-no-watermark$/, /-v2$/];
+const variantRank = (stem) => {
+  const i = VARIANTS.findIndex((re) => re.test(stem));
+  return i === -1 ? VARIANTS.length : i;
+};
+const baseName = (stem) => VARIANTS.reduce((s, re) => s.replace(re, ''), stem);
+
 for (const job of IMAGE_JOBS) {
   mkdirSync(job.to, { recursive: true });
   for (const dir of job.from) {
     if (!existsSync(dir)) continue;
+    /** 출력 이름 → { 원본 파일, 우선순위 } */
+    const best = new Map();
     for (const file of readdirSync(dir)) {
       if (!/\.(png|jpe?g|webp)$/i.test(file)) continue;
       if (job.prefix && !file.startsWith(job.prefix)) continue;
-      // 같은 캐릭터의 -v2(투명 배경, 명세 규격)가 있으면 그것을 쓰고 이전 버전은 건너뛴다
-      if (!/-v2\./i.test(file) && existsSync(join(dir, file.replace(/(\.\w+)$/, '-v2$1')))) continue;
       // 파일명 규칙에 맞지 않는 이름도 바로잡는다. 예: char=beomgol-default.png → char-beomgol-default
-      const out = join(job.to, `${slug(basename(file, extname(file))).replace(/-v2$/, '')}.webp`);
+      const stem = slug(basename(file, extname(file)));
+      const key = baseName(stem);
+      const rank = variantRank(stem);
+      const prev = best.get(key);
+      if (!prev || rank < prev.rank) best.set(key, { file, rank });
+    }
+    for (const [key, { file }] of [...best].sort()) {
+      const out = join(job.to, `${key}.webp`);
       await sharp(join(dir, file))
         .resize({ width: job.width, withoutEnlargement: true })
         .webp({ quality: job.quality ?? 80 })

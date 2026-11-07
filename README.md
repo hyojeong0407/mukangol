@@ -62,7 +62,7 @@ npm run dev        # http://localhost:5173 개발 서버 (정답 DEBUG 패널 �
 ## 아트 교체 방법
 
 1. 동업자가 파일을 올린다: 인물 `characters/char-{id}-{variant}.png`(요괴 본모습은 `-yokai`), 배경 `backgrounds/bg-{장면}.png`, 소리 `audio/sfx-*.ogg`·`audio/bgm-*.ogg`. 필요한 목록은 `동업자_요청사항.md`.
-2. 그림은 `npm run assets` 로 WebP 변환. 음원은 `npm run dev`/`npm run build` 때 자동으로 `public/audio/`에 복사되고 `manifest.json`이 갱신된다.
+2. 그림은 `npm run assets` 로 WebP 변환. 같은 그림의 판본이 여럿이면 `-no-watermark`(`_no-watermark`) > `-v2` > 원본 순으로 하나만 쓴다. 음원은 `npm run dev`/`npm run build` 때 자동으로 `public/audio/`에 복사되고 `manifest.json`이 갱신된다.
 3. 목록에 있는 파일은 게임이 자동으로 쓴다. 없는 것은 임시 표현(효과를 입힌 초상, 색 배경, 합성음)으로 대신한다.
 4. 소환진 도형(`circle-*.png`)은 아직 코드의 SVG를 쓰므로, 받으면 `src/ui/circles.ts`를 교체한다.
 
